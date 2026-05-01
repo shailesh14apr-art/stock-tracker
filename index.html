@@ -356,11 +356,9 @@ function _rsi(c, p=14) {
 
 async function fetchIndicators(sym) {
   // Use a CORS proxy to get Yahoo Finance data from the browser
-  const ySymbol = encodeURIComponent(sym + '.NS');
-  const proxyBase = 'https://corsproxy.io/?';
-  const chartUrl  = proxyBase + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}.NS?interval=1d&range=6mo`);
-  const quoteUrl  = proxyBase + encodeURIComponent(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}.NS`);
-
+  const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}.NS?interval=1d&range=6mo`;
+const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}.NS`;
+  
   const [chartRes, quoteRes] = await Promise.all([fetch(chartUrl), fetch(quoteUrl)]);
   const [chartData, quoteData] = await Promise.all([chartRes.json(), quoteRes.json()]);
 
