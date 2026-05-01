@@ -43,6 +43,14 @@ export default async function handler(req) {
     if (!csvRes.ok) throw new Error(`Stooq returned HTTP ${csvRes.status} for ${symbol}`);
 
     const csv  = await csvRes.text();
+
+    // Debug: if response doesn't look like CSV, show what we got
+    const firstLine = csv.trim().split('\n')[0] || '';
+    if (!firstLine.toLowerCase().includes('date') && !firstLine.match(/^\d{4}-\d{2}-\d{2}/)) {
+      throw new Error(`Stooq returned unexpected response for ${symbol}. First 150 chars: "${csv.slice(0, 150).replace(/\n/g, ' ')}"`);
+    }
+
+    const csv  = await csvRes.text();
     const rows = csv.trim().split('\n').slice(1) // skip header
       .map(r => r.split(','))
       .filter(r => r.length >= 5 && !isNaN(parseFloat(r[4])))
