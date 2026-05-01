@@ -344,6 +344,54 @@ function renderPending(sym) {
     </div>`;
 }
 
+// ── Browser-side price fetch via allorigins CORS proxy ───────────────────────
+async function fetchIndicators(sym) {
+  // allorigins.win is a reliable CORS proxy — wraps Yahoo Finance for browser access
+  const yUrl    = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}.NS?interval=1d&range=6mo`;
+  const proxy   = `https://api.allorigins.win/raw?url=${encodeURIComponent(yUrl)}`;
+
+  const res  = await fetch(proxy, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`Price data fetch failed (HTTP ${res.status})`);
+  const json = await res.json();
+
+  const chart = json?.chart?.result?.[0];
+  if (!chart) throw new Error(`No price data found for ${sym} on NSE. Check the ticker symbol.`);
+
+  const closes  = chart.indicators.quote[0].close.filter(c => c != null);
+  const volumes = chart.indicators.quote[0].volume.filter(v => v != null);
+  if (closes.length < 14) throw new Error('Not enough price history (need 14+ days)');
+
+  const meta      = chart.meta;
+  const price     = meta.regularMarketPrice    ?? closes.at(-1);
+  const prevClose = meta.chartPreviousClose    ?? closes.at(-2);
+  const high52w   = meta.fiftyTwoWeekHigh      ?? Math.max(...closes);
+  const low52w    = meta.fiftyTwoWeekLow       ?? Math.min(...closes);
+  const changePct = ((price - prevClose) / prevClose) * 100;
+  const avgVol20  = _avg(volumes.slice(-20));
+
+  return {
+    price:     +price.toFixed(2),
+    changePct: +changePct.toFixed(2),
+    sma20:     +_avg(closes.slice(-20)).toFixed(2),
+    sma50:     closes.length >= 50 ? +_avg(closes.slice(-50)).toFixed(2) : null,
+    rsi:       +_rsi(closes).toFixed(1),
+    macd:      +(_ema(closes, 12) - _ema(closes, 26)).toFixed(2),
+    change30d: closes.length >= 30 ? +((closes.at(-1) - closes.at(-30)) / closes.at(-30) * 100).toFixed(2) : null,
+    high52w:   +high52w.toFixed(2),
+    low52w:    +low52w.toFixed(2),
+    volRatio:  +(avgVol20 > 0 ? (volumes.at(-1) || avgVol20) / avgVol20 : 1).toFixed(2),
+  };
+}
+
+function _avg(a) { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0; }
+function _ema(c, p) { const k = 2/(p+1); let e = _avg(c.slice(0, p)); for (let i = p; i < c.length; i++) e = c[i]*k + e*(1-k); return e; }
+function _rsi(c, p = 14) {
+  if (c.length < p + 1) return 50;
+  let g = 0, l = 0;
+  for (let i = c.length - p; i < c.length; i++) { const d = c[i] - c[i-1]; if (d > 0) g += d; else l -= d; }
+  return 100 - 100 / (1 + (g/p) / ((l/p) || 0.001));
+}
+
 // ── Main analysis trigger ─────────────────────────────────────────────────────
 async function triggerAnalysis(sym) {
   const k      = KNOWN_STOCKS.find(x => x.symbol === sym);
@@ -352,18 +400,25 @@ async function triggerAnalysis(sym) {
   activeStock  = sym;
 
   renderLoadingState(sym, name);
-
   const stored = getStoredData();
-  stored[sym] = null;
+  stored[sym]  = null;
   localStorage.setItem('stockData', JSON.stringify(stored));
   renderSidebar();
 
   try {
+    // Step 1: fetch live price data from Yahoo Finance via CORS proxy (browser-side)
     setLoadingStep(0);
-    const url = `${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}`;
+    const indicators = await fetchIndicators(sym);
+
+    // Step 2: send indicators to Vercel — Claude only, ~3s, well within limits
     setLoadingStep(1);
-    const res = await fetch(url);
+    const res = await fetch(`${API_BASE}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbol: sym, name, sector, indicators })
+    });
     setLoadingStep(2);
+
     const result = await res.json();
     if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`);
     setLoadingStep(3);
@@ -411,7 +466,7 @@ function renderLoadingState(sym, name) {
       <div class="spinner"></div>
       <div class="loading-title">Analysing ${sym}…</div>
       <div class="loading-steps" id="loading-steps">
-        <div class="loading-step active" id="step-0">📡 Fetching live price data from Alpha Vantage</div>
+        <div class="loading-step active" id="step-0">📡 Fetching live NSE price data</div>
         <div class="loading-step"        id="step-1">🤖 Calling Claude AI for technical analysis</div>
         <div class="loading-step"        id="step-2">📊 Processing results</div>
         <div class="loading-step"        id="step-3">✅ Rendering dashboard</div>
@@ -478,12 +533,12 @@ function renderAICard(record) {
     <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">${a.summary}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
       <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;text-align:center;flex:1;min-width:60px">
-        <div style="font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase">52w Position</div>
-        <div style="font-size:13px;font-weight:700;color:${ind.pctFromLow>70?'var(--green)':ind.pctFromLow<30?'var(--red)':'var(--amber)'}">+${ind.pctFromLow}%</div>
+        <div style="font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase">RSI 14</div>
+        <div style="font-size:13px;font-weight:700;color:${ind.rsi > 70 ? 'var(--red)' : ind.rsi < 35 ? 'var(--green)' : 'var(--amber)'}">${ind.rsi ?? '—'}</div>
       </div>
       <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;text-align:center;flex:1;min-width:60px">
-        <div style="font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase">From 52w High</div>
-        <div style="font-size:13px;font-weight:700;color:${ind.pctFromHigh>-10?'var(--green)':ind.pctFromHigh>-25?'var(--amber)':'var(--red)'}">${ind.pctFromHigh}%</div>
+        <div style="font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase">vs SMA20</div>
+        <div style="font-size:13px;font-weight:700;color:${ind.price > ind.sma20 ? 'var(--green)' : 'var(--red)'}">${ind.sma20 ? (ind.price > ind.sma20 ? '▲' : '▼') + ' ' + Math.abs(((ind.price/ind.sma20)-1)*100).toFixed(1) + '%' : '—'}</div>
       </div>
       ${ind.sma50 ? `<div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;text-align:center;flex:1;min-width:60px">
         <div style="font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase">vs SMA50</div>
