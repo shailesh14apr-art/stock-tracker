@@ -367,11 +367,15 @@ async function triggerAnalysis(sym) {
     if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`);
     setLoadingStep(3);
 
+    const indicators = result.indicators || {};
+    const analysis   = result.analysis || {};
+    if (!indicators.price) throw new Error('Analysis returned invalid indicators');
+
     // Build a display-friendly record and store it
     const record = {
       symbol: sym, name, sector,
-      signal: result.analysis?.signal || 'HOLD',
-      signalReason: result.analysis?.summary || '',
+      signal: analysis.signal || 'HOLD',
+      signalReason: analysis.summary || '',
       lastUpdated: new Date().toISOString(),
       price: {
         current: indicators.price,
@@ -379,7 +383,7 @@ async function triggerAnalysis(sym) {
         weekHigh52: indicators.high52w,
         weekLow52:  indicators.low52w,
       },
-      aiAnalysis: result.analysis,
+      aiAnalysis: analysis,
       aiIndicators: indicators,
       // Placeholders so existing renderers don't crash
       targets: { average: indicators.price, low: indicators.low52w, high: indicators.high52w },
