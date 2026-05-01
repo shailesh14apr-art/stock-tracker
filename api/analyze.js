@@ -1,8 +1,7 @@
 export const config = { runtime: 'edge' };
 
-// Stooq.com — free financial data, no auth, no rate limits, NSE via .NS suffix
-// Used by pandas-datareader, quantlib etc. Very reliable from server-side.
-const STOOQ = 'https://stooq.com/q/d/l';
+// Yahoo Finance chart API for NSE symbols. No Stooq API key required.
+const YAHOO_CHART = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
 export default async function handler(req) {
   const cors = {
@@ -23,37 +22,45 @@ export default async function handler(req) {
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set in Vercel env vars' }, 500, cors);
 
   try {
-    // ── 1. Fetch 6 months of daily OHLCV from Stooq ───────────────────────
-    // Stooq uses lowercase .ns suffix for NSE stocks
-    const stooqSym = symbol.toLowerCase() + '.ns';
+    // ── 1. Fetch 6 months of daily OHLCV from Yahoo Finance chart API ───────
+    const yahooSym = symbol.toUpperCase() + '.NS';
     const today    = new Date();
     const sixMoAgo = new Date(today);
     sixMoAgo.setMonth(today.getMonth() - 6);
-    const d1 = fmt(sixMoAgo);
-    const d2 = fmt(today);
+    const period1 = Math.floor(sixMoAgo.valueOf() / 1000);
+    const period2 = Math.floor(today.valueOf() / 1000);
 
-    const csvRes = await fetch(
-      `${STOOQ}/?s=${stooqSym}&i=d&d1=${d1}&d2=${d2}`,
+    const chartRes = await fetch(
+      `${YAHOO_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${period1}&period2=${period2}&events=history`,
       {
         headers: { 'User-Agent': 'Mozilla/5.0' },
         signal: AbortSignal.timeout(8000)
       }
     );
 
-    if (!csvRes.ok) throw new Error(`Stooq returned HTTP ${csvRes.status} for ${symbol}`);
+    if (!chartRes.ok) throw new Error(`Yahoo Finance returned HTTP ${chartRes.status} for ${symbol}`);
 
-    const csv  = await csvRes.text();
+    const chartData = await chartRes.json();
+    const result    = chartData?.chart?.result?.[0];
+    const error     = chartData?.chart?.error;
 
-    // Debug: if response doesn't look like CSV, show what we got
-    const firstLine = csv.trim().split('\n')[0] || '';
-    if (!firstLine.toLowerCase().includes('date') && !firstLine.match(/^\d{4}-\d{2}-\d{2}/)) {
-      throw new Error(`Stooq returned unexpected response for ${symbol}. First 150 chars: "${csv.slice(0, 150).replace(/\n/g, ' ')}"`);
+    if (!result || error) {
+      throw new Error(`Yahoo Finance returned unexpected data for ${symbol}: ${error?.description || JSON.stringify(chartData).slice(0, 200)}`);
     }
 
-    const rows = csv.trim().split('\n').slice(1) // skip header
-      .map(r => r.split(','))
-      .filter(r => r.length >= 5 && !isNaN(parseFloat(r[4])))
-      .sort((a, b) => a[0].localeCompare(b[0])); // oldest first
+    const timestamps = result.timestamp || [];
+    const quote      = result.indicators?.quote?.[0] || {};
+    const closes     = quote.close || [];
+    const volumes    = quote.volume || [];
+
+    const rows = timestamps
+      .map((ts, idx) => ({
+        date: new Date(ts * 1000).toISOString().slice(0, 10),
+        close: closes[idx],
+        volume: volumes[idx] ?? 0,
+      }))
+      .filter(r => r.close != null)
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     if (rows.length < 14) {
       throw new Error(
@@ -62,23 +69,23 @@ export default async function handler(req) {
       );
     }
 
-    const closes  = rows.map(r => parseFloat(r[4]));
-    const volumes = rows.map(r => parseFloat(r[5] || '0'));
-    const price   = closes.at(-1);
-    const prev    = closes.at(-2);
-    const changePct = ((price - prev) / prev) * 100;
+    const closesOnly  = rows.map(r => r.close);
+    const volumesOnly = rows.map(r => r.volume);
+    const price       = closesOnly.at(-1);
+    const prev        = closesOnly.at(-2);
+    const changePct   = ((price - prev) / prev) * 100;
 
     // ── 2. Compute indicators ──────────────────────────────────────────────
-    const sma20    = avg(closes.slice(-20));
-    const sma50    = closes.length >= 50 ? avg(closes.slice(-50)) : null;
-    const macd     = ema(closes, 12) - ema(closes, 26);
-    const rsi      = calcRSI(closes);
-    const high52w  = Math.max(...closes.slice(-252));
-    const low52w   = Math.min(...closes.slice(-252));
-    const change30d = closes.length >= 30
-      ? ((closes.at(-1) - closes.at(-30)) / closes.at(-30)) * 100 : null;
-    const avgVol20  = avg(volumes.slice(-20));
-    const volRatio  = avgVol20 > 0 ? (volumes.at(-1) || avgVol20) / avgVol20 : 1;
+    const sma20    = avg(closesOnly.slice(-20));
+    const sma50    = closesOnly.length >= 50 ? avg(closesOnly.slice(-50)) : null;
+    const macd     = ema(closesOnly, 12) - ema(closesOnly, 26);
+    const rsi      = calcRSI(closesOnly);
+    const high52w  = Math.max(...closesOnly.slice(-252));
+    const low52w   = Math.min(...closesOnly.slice(-252));
+    const change30d = closesOnly.length >= 30
+      ? ((closesOnly.at(-1) - closesOnly.at(-30)) / closesOnly.at(-30)) * 100 : null;
+    const avgVol20  = avg(volumesOnly.slice(-20));
+    const volRatio  = avgVol20 > 0 ? (volumesOnly.at(-1) || avgVol20) / avgVol20 : 1;
 
     // ── 3. Build Claude prompt ─────────────────────────────────────────────
     const smaLine = (v, l) => v != null
@@ -89,7 +96,7 @@ export default async function handler(req) {
 Analyse ONLY the technical data for ${name} (NSE: ${symbol}${sector ? ', Sector: ' + sector : ''}).
 Pure price/momentum/volume analysis only — no fundamentals, no macro.
 
-LIVE NSE DATA (from Stooq):
+LIVE NSE DATA (from Yahoo Finance):
 - Price: Rs.${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today)
 ${smaLine(sma20, '20-day SMA')}
 ${smaLine(sma50, '50-day SMA')}
