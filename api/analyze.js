@@ -1,7 +1,22 @@
 export const config = { runtime: 'edge' };
 
-// Yahoo Finance chart API for NSE symbols. No Stooq API key required.
-const YAHOO_CHART = 'https://query1.finance.yahoo.com/v8/finance/chart';
+const YF_CHART   = 'https://query1.finance.yahoo.com/v8/finance/chart';
+const YF_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary';
+
+// ── Sector context for Claude prompt ─────────────────────────────────────────
+const SECTOR_CONTEXT = {
+  railways:       'Indian railways/capital goods — key drivers: order book execution, EBITDA margin expansion, government capex cycle. Valuation anchor: P/E vs order book visibility.',
+  banking:        'Indian private/PSU banking — key drivers: NIM trajectory, GNPA trend, loan growth, ROE vs cost of equity. Watch: credit costs and CASA ratio.',
+  it:             'Indian IT services — key drivers: revenue growth (CC terms), EBIT margin, deal TCV wins, attrition normalisation. Valuation: P/E vs growth premium.',
+  fmcg:           'Indian FMCG — key drivers: volume growth vs price growth mix, rural recovery, gross margin trajectory. Valuation: premium P/E justified by consistency.',
+  pharma:         'Indian pharma — key drivers: US generics momentum, domestic formulations growth, R&D pipeline, USFDA compliance. Watch: price erosion in US.',
+  capital_markets:'Indian capital markets — key drivers: AUM growth, active client additions, market share in F&O. Highly correlated with market volumes and sentiment.',
+  real_estate:    'Indian real estate — key drivers: pre-sales momentum, collections, net debt trajectory, land bank. Valuation: NAV discount/premium.',
+  auto:           'Indian automobiles — key drivers: volume growth, EV transition pace, EBITDA margin, market share. Watch: commodity costs and rural demand.',
+  metals:         'Indian metals/mining — key drivers: spread per tonne, net debt/EBITDA, production volume. Highly cyclical — commodity price and China demand.',
+  energy:         'Indian energy/oil — key drivers: dividend yield, refining margins, upstream realisation, net debt. Regulatory risk: APM pricing.',
+  default:        'Indian equity — focus on earnings growth trajectory, valuation vs sector peers, and technical momentum confluence.'
+};
 
 export default async function handler(req) {
   const cors = {
@@ -14,7 +29,7 @@ export default async function handler(req) {
   const p      = new URL(req.url).searchParams;
   const symbol = p.get('symbol');
   const name   = p.get('name')   || symbol;
-  const sector = p.get('sector') || '';
+  const sector = p.get('sector') || 'default';
 
   if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
 
@@ -22,98 +37,178 @@ export default async function handler(req) {
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set in Vercel env vars' }, 500, cors);
 
   try {
-    // ── 1. Fetch 6 months of daily OHLCV from Yahoo Finance chart API ───────
     const yahooSym = symbol.toUpperCase() + '.NS';
     const today    = new Date();
-    const sixMoAgo = new Date(today);
-    sixMoAgo.setMonth(today.getMonth() - 6);
-    const period1 = Math.floor(sixMoAgo.valueOf() / 1000);
-    const period2 = Math.floor(today.valueOf() / 1000);
+    const oneYrAgo = new Date(today); oneYrAgo.setFullYear(today.getFullYear() - 1);
+    const period1  = Math.floor(oneYrAgo / 1000);
+    const period2  = Math.floor(today / 1000);
 
-    const chartRes = await fetch(
-      `${YAHOO_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${period1}&period2=${period2}&events=history`,
-      {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        signal: AbortSignal.timeout(8000)
-      }
-    );
+    // ── 1. Fetch chart data + fundamentals in parallel ─────────────────────
+    const [chartRes, summaryRes] = await Promise.all([
+      fetch(
+        `${YF_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${period1}&period2=${period2}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+      ),
+      fetch(
+        `${YF_SUMMARY}/${encodeURIComponent(yahooSym)}?modules=defaultKeyStatistics,financialData,summaryDetail`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+      )
+    ]);
 
-    if (!chartRes.ok) throw new Error(`Yahoo Finance returned HTTP ${chartRes.status} for ${symbol}`);
-
+    if (!chartRes.ok) throw new Error(`Yahoo Finance chart: HTTP ${chartRes.status}`);
     const chartData = await chartRes.json();
     const result    = chartData?.chart?.result?.[0];
-    const error     = chartData?.chart?.error;
+    if (!result) throw new Error(chartData?.chart?.error?.description || `No chart data for ${symbol}`);
 
-    if (!result || error) {
-      throw new Error(`Yahoo Finance returned unexpected data for ${symbol}: ${error?.description || JSON.stringify(chartData).slice(0, 200)}`);
-    }
-
+    // Parse chart
     const timestamps = result.timestamp || [];
-    const quote      = result.indicators?.quote?.[0] || {};
-    const closes     = quote.close || [];
-    const volumes    = quote.volume || [];
-
+    const q0         = result.indicators?.quote?.[0] || {};
     const rows = timestamps
-      .map((ts, idx) => ({
-        date: new Date(ts * 1000).toISOString().slice(0, 10),
-        close: closes[idx],
-        volume: volumes[idx] ?? 0,
-      }))
+      .map((ts, i) => ({ close: q0.close?.[i], volume: q0.volume?.[i] ?? 0 }))
       .filter(r => r.close != null)
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const closes  = rows.map(r => r.close);
+    const volumes = rows.map(r => r.volume);
 
-    if (rows.length < 14) {
-      throw new Error(
-        `Only ${rows.length} data points for ${symbol} — ` +
-        `check the ticker is a valid NSE symbol (e.g. HDFCBANK, TITAGARH, RELIANCE).`
-      );
-    }
+    if (closes.length < 20) throw new Error(`Only ${closes.length} data points for ${symbol} — need 20+`);
 
-    const closesOnly  = rows.map(r => r.close);
-    const volumesOnly = rows.map(r => r.volume);
-    const price       = closesOnly.at(-1);
-    const prev        = closesOnly.at(-2);
-    const changePct   = ((price - prev) / prev) * 100;
+    // ── 2. Parse fundamentals (non-fatal if unavailable) ──────────────────
+    let fund = {};
+    try {
+      if (summaryRes.ok) {
+        const sj = await summaryRes.json();
+        const ks = sj?.quoteSummary?.result?.[0]?.defaultKeyStatistics || {};
+        const fd = sj?.quoteSummary?.result?.[0]?.financialData         || {};
+        const sd = sj?.quoteSummary?.result?.[0]?.summaryDetail         || {};
+        fund = {
+          pe:             sd.trailingPE?.raw        ?? null,
+          forwardPE:      sd.forwardPE?.raw         ?? null,
+          eps:            ks.trailingEps?.raw        ?? null,
+          pbRatio:        ks.priceToBook?.raw        ?? null,
+          roe:            fd.returnOnEquity?.raw     ?? null,
+          revenueGrowth:  fd.revenueGrowth?.raw      ?? null,
+          earningsGrowth: fd.earningsGrowth?.raw     ?? null,
+          debtToEquity:   fd.debtToEquity?.raw       ?? null,
+          grossMargin:    fd.grossMargins?.raw        ?? null,
+          operatingMargin:fd.operatingMargins?.raw   ?? null,
+          currentRatio:   fd.currentRatio?.raw       ?? null,
+          targetPrice:    fd.targetMeanPrice?.raw    ?? null,
+          analystCount:   fd.numberOfAnalystOpinions?.raw ?? null,
+          recommendation: fd.recommendationKey       ?? null,
+        };
+      }
+    } catch (_) { /* fundamentals optional */ }
 
-    // ── 2. Compute indicators ──────────────────────────────────────────────
-    const sma20    = avg(closesOnly.slice(-20));
-    const sma50    = closesOnly.length >= 50 ? avg(closesOnly.slice(-50)) : null;
-    const macd     = ema(closesOnly, 12) - ema(closesOnly, 26);
-    const rsi      = calcRSI(closesOnly);
-    const high52w  = Math.max(...closesOnly.slice(-252));
-    const low52w   = Math.min(...closesOnly.slice(-252));
-    const change30d = closesOnly.length >= 30
-      ? ((closesOnly.at(-1) - closesOnly.at(-30)) / closesOnly.at(-30)) * 100 : null;
-    const avgVol20  = avg(volumesOnly.slice(-20));
-    const volRatio  = avgVol20 > 0 ? (volumesOnly.at(-1) || avgVol20) / avgVol20 : 1;
+    // ── 3. Technical indicators ────────────────────────────────────────────
+    const price     = closes.at(-1);
+    const prev      = closes.at(-2);
+    const changePct = ((price - prev) / prev) * 100;
+    const sma20     = avg(closes.slice(-20));
+    const sma50     = closes.length >= 50 ? avg(closes.slice(-50)) : null;
+    const ema12     = ema(closes, 12);
+    const ema26     = ema(closes, 26);
+    const macd      = ema12 - ema26;
+    const macdSignal = ema(closes.slice(-35).map((_, i, a) => {
+      if (i < 12) return null;
+      const e12 = ema(a.slice(0, i+1), 12);
+      const e26 = ema(a.slice(0, i+1), 26);
+      return e12 - e26;
+    }).filter(x => x !== null), 9);
+    const rsi       = calcRSI(closes);
+    const high52w   = Math.max(...closes);
+    const low52w    = Math.min(...closes);
+    const change30d = closes.length >= 30 ? ((closes.at(-1) - closes.at(-30)) / closes.at(-30)) * 100 : null;
+    const avgVol20  = avg(volumes.slice(-20));
+    const volRatio  = avgVol20 > 0 ? (volumes.at(-1) || avgVol20) / avgVol20 : 1;
 
-    // ── 3. Build Claude prompt ─────────────────────────────────────────────
+    // Bollinger Bands (20d, 2σ)
+    const stddev20  = Math.sqrt(avg(closes.slice(-20).map(c => Math.pow(c - sma20, 2))));
+    const bbUpper   = sma20 + 2 * stddev20;
+    const bbLower   = sma20 - 2 * stddev20;
+    const bbPct     = stddev20 > 0 ? ((price - bbLower) / (bbUpper - bbLower)) * 100 : 50;
+
+    // ── 4. Pre-score: 7 confirming technical factors (-2 to +2 each) ──────
+    // Gives Claude a structured pre-computed view so it reasons from signals
+    const scores = {
+      trend:    price > sma20 && (!sma50 || price > sma50) ? 2 : price > sma20 ? 1 : sma50 && price > sma50 ? -1 : -2,
+      momentum: rsi > 55 && rsi < 70 ? 2 : rsi > 70 ? -1 : rsi < 35 ? 2 : rsi < 45 ? -1 : 0,  // oversold = bullish
+      macdSig:  macd > 0 && macd > macdSignal ? 2 : macd > 0 ? 1 : macd < 0 && macd < macdSignal ? -2 : -1,
+      range52w: price > high52w * 0.9 ? 2 : price > high52w * 0.7 ? 1 : price > high52w * 0.5 ? 0 : -1,
+      volume:   volRatio > 1.5 && changePct > 0 ? 2 : volRatio > 1.5 && changePct < 0 ? -2 : volRatio < 0.6 ? -1 : 0,
+      bbPos:    bbPct < 20 ? 2 : bbPct > 80 ? -1 : bbPct > 50 ? 1 : 0,  // near lower band = buy zone
+      return30d: change30d != null ? (change30d > 10 ? 2 : change30d > 0 ? 1 : change30d > -10 ? -1 : -2) : 0,
+    };
+    const techScore = Object.values(scores).reduce((a, b) => a + b, 0); // range: -14 to +14
+    const techScoreNorm = ((techScore + 14) / 28 * 10).toFixed(1); // normalised 0–10
+
+    // ── 5. Build sector-aware Claude prompt ───────────────────────────────
     const smaLine = (v, l) => v != null
-      ? `- ${l}: Rs.${v.toFixed(2)} (price ${price > v ? 'ABOVE' : 'BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
+      ? `- ${l}: ₹${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
       : '';
 
-    const prompt = `You are a professional technical analyst for Indian equity markets.
-Analyse ONLY the technical data for ${name} (NSE: ${symbol}${sector ? ', Sector: ' + sector : ''}).
-Pure price/momentum/volume analysis only — no fundamentals, no macro.
+    const fundLines = [
+      fund.pe             != null ? `- Trailing P/E: ${fund.pe.toFixed(1)}x${fund.forwardPE ? ` | Forward P/E: ${fund.forwardPE.toFixed(1)}x` : ''}` : '',
+      fund.eps            != null ? `- EPS (TTM): ₹${fund.eps.toFixed(2)}` : '',
+      fund.pbRatio        != null ? `- Price/Book: ${fund.pbRatio.toFixed(2)}x` : '',
+      fund.roe            != null ? `- ROE: ${(fund.roe * 100).toFixed(1)}%` : '',
+      fund.revenueGrowth  != null ? `- Revenue Growth (YoY): ${(fund.revenueGrowth * 100).toFixed(1)}%` : '',
+      fund.earningsGrowth != null ? `- Earnings Growth (YoY): ${(fund.earningsGrowth * 100).toFixed(1)}%` : '',
+      fund.operatingMargin!= null ? `- Operating Margin: ${(fund.operatingMargin * 100).toFixed(1)}%` : '',
+      fund.debtToEquity   != null ? `- Debt/Equity: ${fund.debtToEquity.toFixed(2)}x` : '',
+      fund.targetPrice    != null ? `- Analyst Target (mean): ₹${fund.targetPrice.toFixed(0)}${fund.analystCount ? ` (${fund.analystCount} analysts)` : ''}` : '',
+      fund.recommendation != null ? `- Analyst Consensus: ${fund.recommendation.toUpperCase()}` : '',
+    ].filter(Boolean).join('\n');
 
-LIVE NSE DATA (from Yahoo Finance):
-- Price: Rs.${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today)
+    const scoreBreakdown = Object.entries(scores)
+      .map(([k, v]) => `  ${k.padEnd(10)}: ${v > 0 ? '+' : ''}${v}`)
+      .join('\n');
+
+    const prompt = `You are a senior equity analyst covering Indian markets with deep expertise in ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
+
+Analyse ${name} (NSE: ${symbol}) using the technical and fundamental data below. Your signal must be based on CONFLUENCE — multiple confirming factors, not a single indicator.
+
+━━━ TECHNICAL DATA ━━━
+- Price: ₹${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today)
 ${smaLine(sma20, '20-day SMA')}
 ${smaLine(sma50, '50-day SMA')}
-- RSI(14): ${rsi.toFixed(1)} — ${rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : 'neutral'}
-- MACD: ${macd.toFixed(2)} (${macd > 0 ? 'bullish' : 'bearish'})
-- 30d return: ${change30d !== null ? change30d.toFixed(2) + '%' : 'N/A'}
-- 52w range: Rs.${low52w.toFixed(2)} – Rs.${high52w.toFixed(2)}
-- From 52w high: ${((price/high52w-1)*100).toFixed(1)}%
-- From 52w low: +${((price/low52w-1)*100).toFixed(1)}%
-- Volume vs 20d avg: ${(volRatio*100).toFixed(0)}%
+- RSI(14): ${rsi.toFixed(1)} — ${rsi > 70 ? 'OVERBOUGHT — caution' : rsi < 30 ? 'OVERSOLD — potential reversal' : rsi < 45 ? 'weakening momentum' : 'healthy range'}
+- MACD: ${macd.toFixed(2)} vs Signal: ${macdSignal.toFixed(2)} → ${macd > macdSignal ? 'BULLISH crossover' : 'BEARISH crossover'}
+- Bollinger Band position: ${bbPct.toFixed(0)}% (0=lower band, 100=upper band) — ${bbPct < 20 ? 'near lower band, oversold zone' : bbPct > 80 ? 'near upper band, extended' : 'mid-band, neutral'}
+- 30-day return: ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'}
+- 52-week range: ₹${low52w.toFixed(2)} – ₹${high52w.toFixed(2)} | Price at ${(((price - low52w) / (high52w - low52w)) * 100).toFixed(0)}% of range
+- Volume vs 20d avg: ${(volRatio * 100).toFixed(0)}% ${volRatio > 1.5 ? '(HIGH — conviction move)' : volRatio < 0.6 ? '(LOW — weak conviction)' : '(normal)'}
+
+━━━ PRE-COMPUTED SIGNAL SCORE ━━━
+Technical score: ${techScoreNorm}/10 (raw: ${techScore}/14)
+Factor breakdown:
+${scoreBreakdown}
+Interpretation: ${techScore >= 6 ? 'Strong bullish confluence' : techScore >= 2 ? 'Mild bullish bias' : techScore >= -2 ? 'Neutral / mixed signals' : techScore >= -6 ? 'Mild bearish pressure' : 'Strong bearish confluence'}
+
+━━━ FUNDAMENTAL DATA ━━━
+${fundLines || '(Fundamental data unavailable — base signal on technicals only)'}
+
+━━━ SECTOR CONTEXT ━━━
+${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
+
+━━━ YOUR TASK ━━━
+1. Weigh the technical score against fundamentals and sector context
+2. Identify the 3 most important signals (bullish or bearish) driving your view
+3. Set support at a meaningful technical level (SMA, recent swing low, BB lower)
+4. Set resistance at the next meaningful barrier (SMA, 52w high, BB upper)
+5. Give a realistic 2–4 week outlook
 
 Reply ONLY with valid JSON, no markdown:
-{"signal":"BUY_MORE","confidence":"HIGH","summary":"2-3 sentence overview","technicalPoints":["point 1","point 2","point 3"],"support":"Rs.XXX - reason","resistance":"Rs.XXX - reason","outlook":"1-2 sentence short-term outlook (2-4 weeks)"}
-signal: BUY_MORE | HOLD | REVIEW
-confidence: HIGH | MEDIUM | LOW`;
+{
+  "signal": "BUY_MORE" | "HOLD" | "REVIEW",
+  "confidence": "HIGH" | "MEDIUM" | "LOW",
+  "summary": "2-3 sentences combining technical score, key fundamental read, and sector context",
+  "technicalPoints": ["most important signal", "second signal", "third signal"],
+  "support": "₹XXX — specific reason (e.g. 20d SMA / BB lower band / prior swing low)",
+  "resistance": "₹XXX — specific reason (e.g. 52w high / BB upper band / SMA convergence)",
+  "outlook": "Realistic 2–4 week price action outlook with a specific trigger to watch",
+  "keyRisk": "Single biggest risk to this view"
+}`;
 
-    // ── 4. Call Claude ─────────────────────────────────────────────────────
+    // ── 6. Call Claude ─────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -122,11 +217,11 @@ confidence: HIGH | MEDIUM | LOW`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        model: 'claude-sonnet-4-20250514', // upgraded to Sonnet for better analysis
+        max_tokens: 700,
         messages: [{ role: 'user', content: prompt }]
       }),
-      signal: AbortSignal.timeout(12000)
+      signal: AbortSignal.timeout(20000)
     });
 
     if (!claudeRes.ok) return reply({ error: 'Claude: ' + (await claudeRes.text()).slice(0, 200) }, 500, cors);
@@ -141,10 +236,15 @@ confidence: HIGH | MEDIUM | LOW`;
         price: +price.toFixed(2), changePct: +changePct.toFixed(2),
         sma20: +sma20.toFixed(2), sma50: sma50 ? +sma50.toFixed(2) : null,
         rsi: +rsi.toFixed(1), macd: +macd.toFixed(2),
+        macdSignal: +macdSignal.toFixed(2),
+        bbUpper: +bbUpper.toFixed(2), bbLower: +bbLower.toFixed(2), bbPct: +bbPct.toFixed(1),
         change30d: change30d !== null ? +change30d.toFixed(2) : null,
         high52w: +high52w.toFixed(2), low52w: +low52w.toFixed(2),
         volRatio: +volRatio.toFixed(2),
+        techScore: +techScoreNorm,
+        scores,
       },
+      fundamentals: fund,
       analysis,
       fetchedAt: new Date().toISOString()
     }, 200, cors);
@@ -154,17 +254,14 @@ confidence: HIGH | MEDIUM | LOW`;
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const reply = (data, status, headers) =>
   new Response(data ? JSON.stringify(data) : '', {
     status: status || 200,
     headers: { 'Content-Type': 'application/json', ...headers }
   });
 
-const fmt = d => d.toISOString().slice(0, 10).replace(/-/g, '');
-
-function avg(a) { const v = a.filter(x => !isNaN(x)); return v.length ? v.reduce((s,x)=>s+x,0)/v.length : 0; }
-function ema(c, p) { const k=2/(p+1); let e=avg(c.slice(0,p)); for(let i=p;i<c.length;i++) e=c[i]*k+e*(1-k); return e; }
+function avg(a) { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((s,x)=>s+x,0)/v.length : 0; }
+function ema(c, p) { if (!c.length || p > c.length) return avg(c); const k=2/(p+1); let e=avg(c.slice(0,p)); for(let i=p;i<c.length;i++) e=c[i]*k+e*(1-k); return e; }
 function calcRSI(c, p=14) {
   if (c.length < p+1) return 50;
   let g=0, l=0;
