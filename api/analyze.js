@@ -48,8 +48,8 @@ export default async function handler(req) {
         { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
       ),
       fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}&fields=trailingPE,forwardPE,marketCap,bookValue,priceToBook,epsTrailingTwelveMonths,dividendYield,returnOnEquity,returnOnAssets,revenueGrowth,earningsGrowth,operatingMargins,debtToEquity,targetMeanPrice,targetHighPrice,targetLowPrice,numberOfAnalystOpinions,recommendationKey,enterpriseToEbitda`,
-        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(8000) }
       )
     ]);
 
@@ -68,47 +68,85 @@ export default async function handler(req) {
 
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points for ${symbol} — need 20+`);
 
-    // ── 2. Parse fundamentals from v7/finance/quote ───────────────────────
+    const parseQuoteFundamentals = q => {
+      const mcap = q.marketCap ?? null;
+      const pb   = q.priceToBook ?? null;
+      const curr = closes.at(-1);
+      return {
+        pe:              q.trailingPE             ?? null,
+        forwardPE:       q.forwardPE              ?? null,
+        pbRatio:         pb,
+        bookValue:       q.bookValue              ?? (pb && curr ? +(curr / pb).toFixed(2) : null),
+        eps:             q.epsTrailingTwelveMonths ?? null,
+        evEbitda:        q.enterpriseToEbitda      ?? null,
+        roe:             q.returnOnEquity          ?? null,
+        roce:            q.returnOnAssets          ?? null,
+        operatingMargin: q.operatingMargins        ?? null,
+        revenueGrowth:   q.revenueGrowth           ?? null,
+        earningsGrowth:  q.earningsGrowth          ?? null,
+        debtToEquity:    q.debtToEquity            ?? null,
+        dividendYield:   q.dividendYield           ?? null,
+        dividendRate:    q.dividendRate            ?? null,
+        marketCap:       mcap,
+        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
+        targetPrice:     q.targetMeanPrice         ?? null,
+        targetHigh:      q.targetHighPrice         ?? null,
+        targetLow:       q.targetLowPrice          ?? null,
+        analystCount:    q.numberOfAnalystOpinions ?? null,
+        recommendation:  q.recommendationKey       ?? null,
+      };
+    };
+
+    const parseSummaryFundamentals = async () => {
+      const summaryRes = await fetch(
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData`,
+        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) }
+      );
+      if (!summaryRes.ok) return null;
+      const sj = await summaryRes.json();
+      const s  = sj?.quoteSummary?.result?.[0] || {};
+      const price = s.price || {};
+      const summary = s.summaryDetail || {};
+      const stats = s.defaultKeyStatistics || {};
+      const fin = s.financialData || {};
+      const mcap = price.marketCap ?? null;
+      const pb   = price.priceToBook ?? summary.priceToBook ?? null;
+      const curr = closes.at(-1);
+      return {
+        pe:              price.trailingPE               ?? null,
+        forwardPE:       price.forwardPE                ?? null,
+        pbRatio:         pb,
+        bookValue:       price.bookValue               ?? stats.bookValue ?? (pb && curr ? +(curr / pb).toFixed(2) : null),
+        eps:             price.trailingEps              ?? null,
+        evEbitda:        fin.enterpriseToEbitda        ?? null,
+        roe:             stats.returnOnEquity          ?? null,
+        roce:            fin.returnOnAssets            ?? null,
+        operatingMargin: fin.operatingMargins          ?? null,
+        revenueGrowth:   fin.revenueGrowth             ?? null,
+        earningsGrowth:  fin.earningsGrowth            ?? null,
+        debtToEquity:    stats.debtToEquity            ?? null,
+        dividendYield:   summary.dividendYield         ?? null,
+        dividendRate:    summary.dividendRate          ?? null,
+        marketCap:       mcap,
+        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
+        targetPrice:     fin.targetMeanPrice           ?? null,
+        targetHigh:      fin.targetHighPrice          ?? null,
+        targetLow:       fin.targetLowPrice           ?? null,
+        analystCount:    fin.numberOfAnalystOpinions   ?? null,
+        recommendation:  fin.recommendationKey         ?? null,
+      };
+    };
+
     let fund = {};
     try {
       if (quoteRes.ok) {
         const qj = await quoteRes.json();
-        const q  = qj?.quoteResponse?.result?.[0] || {};
-
-        const mcap = q.marketCap ?? null;
-        const pb   = q.priceToBook ?? null;
-        const curr = closes.at(-1);
-
-        fund = {
-          // Valuation
-          pe:              q.trailingPE             ?? null,
-          forwardPE:       q.forwardPE              ?? null,
-          pbRatio:         pb,
-          bookValue:       q.bookValue              ?? (pb && curr ? +(curr / pb).toFixed(2) : null),
-          eps:             q.epsTrailingTwelveMonths ?? null,
-          evEbitda:        q.enterpriseToEbitda      ?? null,
-          // Quality
-          roe:             q.returnOnEquity          ?? null,
-          roce:            q.returnOnAssets          ?? null,
-          operatingMargin: q.operatingMargins        ?? null,
-          // Growth
-          revenueGrowth:   q.revenueGrowth           ?? null,
-          earningsGrowth:  q.earningsGrowth          ?? null,
-          // Health
-          debtToEquity:    q.debtToEquity            ?? null,
-          // Income
-          dividendYield:   q.dividendYield           ?? null,
-          dividendRate:    q.dividendRate            ?? null,
-          // Size
-          marketCap:       mcap,
-          marketCapCr:     mcap ? +(mcap / 1e7).toFixed(0) : null,
-          // Analyst
-          targetPrice:     q.targetMeanPrice         ?? null,
-          targetHigh:      q.targetHighPrice         ?? null,
-          targetLow:       q.targetLowPrice          ?? null,
-          analystCount:    q.numberOfAnalystOpinions ?? null,
-          recommendation:  q.recommendationKey       ?? null,
-        };
+        const q  = qj?.quoteResponse?.result?.[0];
+        if (q) fund = parseQuoteFundamentals(q);
+      }
+      if (!fund.marketCap && !fund.pe && !fund.pbRatio) {
+        const fallbackFund = await parseSummaryFundamentals();
+        if (fallbackFund) fund = { ...fund, ...fallbackFund };
       }
     } catch (_) { /* fundamentals optional */ }
 
