@@ -1,7 +1,6 @@
 export const config = { runtime: 'edge' };
 
 const YF_CHART   = 'https://query1.finance.yahoo.com/v8/finance/chart';
-const YF_SUMMARY = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary';
 
 const SECTOR_CONTEXT = {
   railways:       'Indian railways/capital goods — key drivers: order book execution, EBITDA margin expansion, government capex cycle. Valuation anchor: P/E vs order book visibility.',
@@ -42,14 +41,14 @@ export default async function handler(req) {
     const period1  = Math.floor(oneYrAgo / 1000);
     const period2  = Math.floor(today / 1000);
 
-    // ── 1. Parallel fetch: chart + full fundamentals ───────────────────────
-    const [chartRes, summaryRes] = await Promise.all([
+    // ── 1. Parallel fetch: chart + quote (fundamentals) ───────────────────
+    const [chartRes, quoteRes] = await Promise.all([
       fetch(
         `${YF_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${period1}&period2=${period2}`,
         { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
       ),
       fetch(
-        `${YF_SUMMARY}/${encodeURIComponent(yahooSym)}?modules=defaultKeyStatistics,financialData,summaryDetail,assetProfile`,
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}&fields=trailingPE,forwardPE,marketCap,bookValue,priceToBook,epsTrailingTwelveMonths,dividendYield,returnOnEquity,returnOnAssets,revenueGrowth,earningsGrowth,operatingMargins,debtToEquity,targetMeanPrice,targetHighPrice,targetLowPrice,numberOfAnalystOpinions,recommendationKey,enterpriseToEbitda`,
         { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
       )
     ]);
@@ -69,51 +68,46 @@ export default async function handler(req) {
 
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points for ${symbol} — need 20+`);
 
-    // ── 2. Parse fundamentals ─────────────────────────────────────────────
+    // ── 2. Parse fundamentals from v7/finance/quote ───────────────────────
     let fund = {};
     try {
-      if (summaryRes.ok) {
-        const sj  = await summaryRes.json();
-        const res = sj?.quoteSummary?.result?.[0] || {};
-        const ks  = res.defaultKeyStatistics || {};
-        const fd  = res.financialData        || {};
-        const sd  = res.summaryDetail        || {};
+      if (quoteRes.ok) {
+        const qj = await quoteRes.json();
+        const q  = qj?.quoteResponse?.result?.[0] || {};
 
-        const mcapRaw = sd.marketCap?.raw ?? null;
-        const price   = closes.at(-1);
-        const pb      = ks.priceToBook?.raw ?? null;
+        const mcap = q.marketCap ?? null;
+        const pb   = q.priceToBook ?? null;
+        const curr = closes.at(-1);
 
         fund = {
           // Valuation
-          pe:              sd.trailingPE?.raw           ?? null,
-          forwardPE:       sd.forwardPE?.raw            ?? null,
+          pe:              q.trailingPE             ?? null,
+          forwardPE:       q.forwardPE              ?? null,
           pbRatio:         pb,
-          bookValue:       pb && price ? +(price / pb).toFixed(2) : null,
-          eps:             ks.trailingEps?.raw           ?? null,
-          evEbitda:        ks.enterpriseToEbitda?.raw    ?? null,
+          bookValue:       q.bookValue              ?? (pb && curr ? +(curr / pb).toFixed(2) : null),
+          eps:             q.epsTrailingTwelveMonths ?? null,
+          evEbitda:        q.enterpriseToEbitda      ?? null,
           // Quality
-          roe:             fd.returnOnEquity?.raw        ?? null,
-          roce:            fd.returnOnAssets?.raw        ?? null,   // proxy; YF doesn't expose ROCE directly
-          operatingMargin: fd.operatingMargins?.raw      ?? null,
-          grossMargin:     fd.grossMargins?.raw          ?? null,
+          roe:             q.returnOnEquity          ?? null,
+          roce:            q.returnOnAssets          ?? null,
+          operatingMargin: q.operatingMargins        ?? null,
           // Growth
-          revenueGrowth:   fd.revenueGrowth?.raw         ?? null,
-          earningsGrowth:  fd.earningsGrowth?.raw        ?? null,
+          revenueGrowth:   q.revenueGrowth           ?? null,
+          earningsGrowth:  q.earningsGrowth          ?? null,
           // Health
-          debtToEquity:    fd.debtToEquity?.raw          ?? null,
-          currentRatio:    fd.currentRatio?.raw          ?? null,
+          debtToEquity:    q.debtToEquity            ?? null,
           // Income
-          dividendYield:   sd.dividendYield?.raw         ?? null,
-          dividendRate:    sd.dividendRate?.raw           ?? null,
+          dividendYield:   q.dividendYield           ?? null,
+          dividendRate:    q.dividendRate            ?? null,
           // Size
-          marketCap:       mcapRaw,
-          marketCapCr:     mcapRaw ? +(mcapRaw / 1e7).toFixed(0) : null,
+          marketCap:       mcap,
+          marketCapCr:     mcap ? +(mcap / 1e7).toFixed(0) : null,
           // Analyst
-          targetPrice:     fd.targetMeanPrice?.raw       ?? null,
-          targetHigh:      fd.targetHighPrice?.raw       ?? null,
-          targetLow:       fd.targetLowPrice?.raw        ?? null,
-          analystCount:    fd.numberOfAnalystOpinions?.raw ?? null,
-          recommendation:  fd.recommendationKey          ?? null,
+          targetPrice:     q.targetMeanPrice         ?? null,
+          targetHigh:      q.targetHighPrice         ?? null,
+          targetLow:       q.targetLowPrice          ?? null,
+          analystCount:    q.numberOfAnalystOpinions ?? null,
+          recommendation:  q.recommendationKey       ?? null,
         };
       }
     } catch (_) { /* fundamentals optional */ }
