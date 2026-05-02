@@ -1,0 +1,200 @@
+{
+  "_meta": {
+    "description": "Fundamental data for watchlist stocks. Update quarterly after results.",
+    "lastUpdated": "2025-05-02",
+    "source": "Screener.in / Company filings / NSE"
+  },
+  "TITAGARH": {
+    "marketCapCr": 9200,
+    "pe": 38.5, "forwardPE": 28.0,
+    "pbRatio": 5.2, "bookValue": 147.8, "eps": 19.9,
+    "roe": 14.2, "roce": 18.6, "operatingMargin": 12.4, "netMargin": 8.1,
+    "debtToEquity": 0.08, "currentRatio": 1.8,
+    "revenueGrowth": 28.4, "earningsGrowth": 42.1,
+    "dividendYield": 0.26, "dividendRate": 2.0,
+    "targetPrice": 950, "analystCount": 8, "recommendation": "buy",
+    "analystBuy": 6, "analystHold": 2, "analystSell": 0,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 712, "ebitda": 89, "pat": 58 },
+      { "quarter": "Q2 FY25", "revenue": 680, "ebitda": 82, "pat": 52 },
+      { "quarter": "Q1 FY25", "revenue": 624, "ebitda": 74, "pat": 47 },
+      { "quarter": "Q4 FY24", "revenue": 598, "ebitda": 69, "pat": 43 }
+    ],
+    "lastResultDate": "2025-02-14",
+    "notes": "Largest Indian wagon manufacturer. Metro rail and freight corridor tailwinds."
+  },
+  "HDFCBANK": {
+    "marketCapCr": 1320000,
+    "pe": 19.2, "forwardPE": 16.8,
+    "pbRatio": 2.8, "bookValue": 275.6, "eps": 40.2,
+    "roe": 17.1, "roce": null, "operatingMargin": null, "netMargin": 22.4,
+    "nim": 3.46, "gnpa": 1.33, "nnpa": 0.39, "casa": 38.2, "car": 19.8,
+    "debtToEquity": null,
+    "revenueGrowth": 7.8, "earningsGrowth": 2.6,
+    "dividendYield": 1.12, "dividendRate": 19.5,
+    "targetPrice": 2050, "analystCount": 42, "recommendation": "buy",
+    "analystBuy": 35, "analystHold": 6, "analystSell": 1,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 42800, "ebitda": null, "pat": 16736 },
+      { "quarter": "Q2 FY25", "revenue": 41500, "ebitda": null, "pat": 16821 },
+      { "quarter": "Q1 FY25", "revenue": 39900, "ebitda": null, "pat": 16175 },
+      { "quarter": "Q4 FY24", "revenue": 39800, "ebitda": null, "pat": 16512 }
+    ],
+    "lastResultDate": "2025-01-22",
+    "notes": "Post-merger integration with HDFC Ltd ongoing. CD ratio normalisation underway."
+  },
+  "ICICIBANK": {
+    "marketCapCr": 896000,
+    "pe": 17.8, "forwardPE": 15.2,
+    "pbRatio": 3.2, "bookValue": 394.2, "eps": 70.8,
+    "roe": 18.9, "roce": null, "operatingMargin": null, "netMargin": 26.4,
+    "nim": 4.25, "gnpa": 1.96, "nnpa": 0.42, "casa": 40.8, "car": 16.6,
+    "debtToEquity": null,
+    "revenueGrowth": 14.2, "earningsGrowth": 14.8,
+    "dividendYield": 0.78, "dividendRate": 10.0,
+    "targetPrice": 1600, "analystCount": 38, "recommendation": "buy",
+    "analystBuy": 32, "analystHold": 5, "analystSell": 1,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 21800, "ebitda": null, "pat": 11792 },
+      { "quarter": "Q2 FY25", "revenue": 21000, "ebitda": null, "pat": 11792 },
+      { "quarter": "Q1 FY25", "revenue": 20400, "ebitda": null, "pat": 11059 },
+      { "quarter": "Q4 FY24", "revenue": 19600, "ebitda": null, "pat": 10708 }
+    ],
+    "lastResultDate": "2025-01-25",
+    "notes": "Best-in-class retail franchise. Consistent earnings compounder."
+  },
+  "SBIN": {
+    "marketCapCr": 948000,
+    "pe": 9.8, "forwardPE": 8.4,
+    "pbRatio": 1.42, "bookValue": 752.4, "eps": 109.0,
+    "roe": 16.2, "roce": null, "operatingMargin": null, "netMargin": 18.2,
+    "nim": 3.22, "gnpa": 2.13, "nnpa": 0.53, "casa": 41.2, "car": 13.8,
+    "debtToEquity": null,
+    "revenueGrowth": 8.4, "earningsGrowth": 22.6,
+    "dividendYield": 1.78, "dividendRate": 13.7,
+    "targetPrice": 1020, "analystCount": 28, "recommendation": "buy",
+    "analystBuy": 22, "analystHold": 5, "analystSell": 1,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 68400, "ebitda": null, "pat": 16892 },
+      { "quarter": "Q2 FY25", "revenue": 66800, "ebitda": null, "pat": 18331 },
+      { "quarter": "Q1 FY25", "revenue": 64300, "ebitda": null, "pat": 17035 },
+      { "quarter": "Q4 FY24", "revenue": 62900, "ebitda": null, "pat": 20698 }
+    ],
+    "lastResultDate": "2025-02-08",
+    "notes": "Largest PSU bank. Strong rural reach and government business moat."
+  },
+  "TCS": {
+    "marketCapCr": 1298000,
+    "pe": 26.4, "forwardPE": 23.8,
+    "pbRatio": 12.6, "bookValue": 284.8, "eps": 136.0,
+    "roe": 52.4, "roce": 66.2, "operatingMargin": 24.5, "netMargin": 19.8,
+    "debtToEquity": 0.0,
+    "revenueGrowth": 5.6, "earningsGrowth": 4.8,
+    "dividendYield": 1.62, "dividendRate": 46.0,
+    "targetPrice": 4200, "analystCount": 36, "recommendation": "hold",
+    "analystBuy": 18, "analystHold": 14, "analystSell": 4,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 63973, "ebitda": 15686, "pat": 12380 },
+      { "quarter": "Q2 FY25", "revenue": 62378, "ebitda": 15230, "pat": 11909 },
+      { "quarter": "Q1 FY25", "revenue": 61237, "ebitda": 15030, "pat": 12040 },
+      { "quarter": "Q4 FY24", "revenue": 61077, "ebitda": 15027, "pat": 12434 }
+    ],
+    "lastResultDate": "2025-01-09",
+    "notes": "Largest Indian IT. Strong BFSI deal wins. GenAI positioning ahead of peers."
+  },
+  "INFY": {
+    "marketCapCr": 628000,
+    "pe": 23.8, "forwardPE": 21.2,
+    "pbRatio": 8.4, "bookValue": 178.6, "eps": 63.2,
+    "roe": 33.8, "roce": 42.6, "operatingMargin": 21.3, "netMargin": 17.4,
+    "debtToEquity": 0.0,
+    "revenueGrowth": 6.2, "earningsGrowth": 8.4,
+    "dividendYield": 2.84, "dividendRate": 42.0,
+    "targetPrice": 1900, "analystCount": 34, "recommendation": "buy",
+    "analystBuy": 24, "analystHold": 8, "analystSell": 2,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 41764, "ebitda": 8896, "pat": 6806 },
+      { "quarter": "Q2 FY25", "revenue": 40986, "ebitda": 8721, "pat": 6506 },
+      { "quarter": "Q1 FY25", "revenue": 39315, "ebitda": 8371, "pat": 6368 },
+      { "quarter": "Q4 FY24", "revenue": 37923, "ebitda": 8219, "pat": 7975 }
+    ],
+    "lastResultDate": "2025-01-16",
+    "notes": "Raised FY25 guidance. Strong large deal momentum. Cost efficiency improving."
+  },
+  "RELIANCE": {
+    "marketCapCr": 1742000,
+    "pe": 24.2, "forwardPE": 19.8,
+    "pbRatio": 2.18, "bookValue": 1193.4, "eps": 107.6,
+    "roe": 9.2, "roce": 11.4, "operatingMargin": 16.8, "netMargin": 7.4,
+    "debtToEquity": 0.38,
+    "revenueGrowth": 8.2, "earningsGrowth": 6.4,
+    "dividendYield": 0.38, "dividendRate": 10.0,
+    "targetPrice": 3200, "analystCount": 32, "recommendation": "buy",
+    "analystBuy": 26, "analystHold": 5, "analystSell": 1,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 243264, "ebitda": 48013, "pat": 21804 },
+      { "quarter": "Q2 FY25", "revenue": 235481, "ebitda": 46296, "pat": 19323 },
+      { "quarter": "Q1 FY25", "revenue": 228892, "ebitda": 45343, "pat": 15138 },
+      { "quarter": "Q4 FY24", "revenue": 226400, "ebitda": 43804, "pat": 18951 }
+    ],
+    "lastResultDate": "2025-01-17",
+    "notes": "Retail + Jio driving re-rating. O2C cycle recovering. New energy capex ongoing."
+  },
+  "WIPRO": {
+    "marketCapCr": 266000,
+    "pe": 24.1, "forwardPE": 21.5,
+    "pbRatio": 4.2, "bookValue": 114.8, "eps": 20.4,
+    "roe": 17.8, "roce": 22.1, "operatingMargin": 17.5, "netMargin": 14.2,
+    "debtToEquity": 0.09,
+    "revenueGrowth": 0.6, "earningsGrowth": 5.2,
+    "dividendYield": 0.52, "dividendRate": 2.5,
+    "targetPrice": 320, "analystCount": 28, "recommendation": "hold",
+    "analystBuy": 10, "analystHold": 14, "analystSell": 4,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 22319, "ebitda": 3906, "pat": 3354 },
+      { "quarter": "Q2 FY25", "revenue": 22301, "ebitda": 3892, "pat": 3209 },
+      { "quarter": "Q1 FY25", "revenue": 21964, "ebitda": 3843, "pat": 3248 },
+      { "quarter": "Q4 FY24", "revenue": 22208, "ebitda": 3886, "pat": 2835 }
+    ],
+    "lastResultDate": "2025-01-16",
+    "notes": "Recovery slower than peers. New CEO driving operational restructuring."
+  },
+  "MARUTI": {
+    "marketCapCr": 414000,
+    "pe": 31.2, "forwardPE": 26.4,
+    "pbRatio": 5.8, "bookValue": 2267.4, "eps": 421.8,
+    "roe": 19.4, "roce": 24.6, "operatingMargin": 12.8, "netMargin": 10.2,
+    "debtToEquity": 0.0,
+    "revenueGrowth": 10.4, "earningsGrowth": 18.6,
+    "dividendYield": 0.72, "dividendRate": 95.0,
+    "targetPrice": 14500, "analystCount": 38, "recommendation": "buy",
+    "analystBuy": 28, "analystHold": 8, "analystSell": 2,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 37673, "ebitda": 4822, "pat": 3727 },
+      { "quarter": "Q2 FY25", "revenue": 37234, "ebitda": 4678, "pat": 3893 },
+      { "quarter": "Q1 FY25", "revenue": 35531, "ebitda": 4547, "pat": 3649 },
+      { "quarter": "Q4 FY24", "revenue": 33580, "ebitda": 4290, "pat": 3878 }
+    ],
+    "lastResultDate": "2025-01-30",
+    "notes": "Market leader 41% share. SUV mix improving margins. EV strategy unfolding."
+  },
+  "TATAMOTORS": {
+    "marketCapCr": 278000,
+    "pe": 8.4, "forwardPE": 7.2,
+    "pbRatio": 2.8, "bookValue": 268.4, "eps": 88.4,
+    "roe": 34.2, "roce": 18.6, "operatingMargin": 10.4, "netMargin": 7.8,
+    "debtToEquity": 1.42,
+    "revenueGrowth": 8.8, "earningsGrowth": 48.2,
+    "dividendYield": 0.26, "dividendRate": 2.0,
+    "targetPrice": 1000, "analystCount": 34, "recommendation": "buy",
+    "analystBuy": 26, "analystHold": 7, "analystSell": 1,
+    "quarterlyResults": [
+      { "quarter": "Q3 FY25", "revenue": 113575, "ebitda": 12882, "pat": 5578 },
+      { "quarter": "Q2 FY25", "revenue": 105971, "ebitda": 12054, "pat": 3343 },
+      { "quarter": "Q1 FY25", "revenue": 108048, "ebitda": 13384, "pat": 5566 },
+      { "quarter": "Q4 FY24", "revenue": 119986, "ebitda": 15486, "pat": 17528 }
+    ],
+    "lastResultDate": "2025-02-12",
+    "notes": "JLR recovery driving earnings. India EV leader with Nexon. Debt reduction key."
+  }
+}

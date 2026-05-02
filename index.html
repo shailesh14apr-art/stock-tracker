@@ -265,6 +265,14 @@ const KNOWN_STOCKS = [
 
 let activeStock = null;
 let activeChart = null;
+let fundDB = {}; // loaded from /fundamentals.json
+
+async function loadFundamentals() {
+  try {
+    const res = await fetch('/fundamentals.json');
+    if (res.ok) { const data = await res.json(); fundDB = data; delete fundDB._meta; }
+  } catch (_) {}
+}
 
 function getStoredData() { try { return JSON.parse(localStorage.getItem('stockData')||'{}'); } catch { return {}; } }
 function storeAnalysis(sym, d) { const a=getStoredData(); a[sym]=d; localStorage.setItem('stockData',JSON.stringify(a)); }
@@ -323,7 +331,9 @@ async function triggerAnalysis(sym) {
   renderSidebar();
   try {
     setLoadingStep(0);
-    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}`;
+    const fundData = fundDB[sym] || {};
+    const fundParam = encodeURIComponent(JSON.stringify(fundData));
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${fundParam}`;
     setLoadingStep(1);
     const res=await fetch(url);
     setLoadingStep(2);
@@ -342,7 +352,7 @@ async function triggerAnalysis(sym) {
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
       aiAnalysis:analysis,
       aiIndicators:ind,
-      fundamentals:fund,
+      fundamentals:{...fundDB[sym]||{}, ...fund},
       targets:{average:fund.targetPrice||ind.price,low:ind.low52w,high:fund.targetPrice||(ind.high52w*1.05)},
       analysts:{buy:0,hold:0,sell:0},
       keyMetrics:{},quarterly:[],segments:[],competitors:[],
@@ -403,39 +413,39 @@ function renderScreenerMetrics(record) {
   const fmtX   = v => v!=null ? v.toFixed(2)+'x' : '—';
   const qcls   = (v,hi,lo) => v==null?'':v>=hi?'good':v<=lo?'bad':'neutral';
 
-  const curr   = ind.price ?? p.current ?? null;
-  const h52    = ind.high52w ?? p.weekHigh52 ?? null;
-  const l52    = ind.low52w  ?? p.weekLow52 ?? null;
-  const upside = fun.targetPrice != null && curr != null ? ((fun.targetPrice-curr)/curr*100) : null;
+  const curr   = ind.price ?? p.current;
+  const h52    = ind.high52w ?? p.weekHigh52;
+  const l52    = ind.low52w  ?? p.weekLow52;
+  const upside = fun.targetPrice && curr ? ((fun.targetPrice-curr)/curr*100) : null;
 
   const cells = [
     // ── Price block ───────────────────────────────────────────────────────
-    { label:'Market Cap',    value: fun.marketCapCr != null ? fmtCr(fun.marketCapCr) : '—', sub:'' },
-    { label:'Current Price', value: curr != null ? '₹'+curr.toLocaleString('en-IN') : '—',
+    { label:'Market Cap',    value: fun.marketCapCr ? fmtCr(fun.marketCapCr) : '—', sub:'' },
+    { label:'Current Price', value: curr ? '₹'+curr.toLocaleString('en-IN') : '—',
       sub: p.changePercent!=null ? (p.changePercent>=0?'▲ +':'▼ ')+Math.abs(p.changePercent).toFixed(2)+'% today':'',
       subCls: p.changePercent>=0?'good':'bad' },
-    { label:'52W High', value: h52 != null ? '₹'+h52.toLocaleString('en-IN') : '—',
-      sub: curr!=null&&h52!=null ? ((curr/h52-1)*100).toFixed(1)+'% from high':'', subCls:'bad' },
-    { label:'52W Low',  value: l52 != null ? '₹'+l52.toLocaleString('en-IN')  : '—',
-      sub: curr!=null&&l52!=null ? '+'+((curr/l52-1)*100).toFixed(1)+'% from low':'', subCls:'good' },
+    { label:'52W High', value: h52 ? '₹'+h52.toLocaleString('en-IN') : '—',
+      sub: curr&&h52 ? ((curr/h52-1)*100).toFixed(1)+'% from high':'', subCls:'bad' },
+    { label:'52W Low',  value: l52 ? '₹'+l52.toLocaleString('en-IN')  : '—',
+      sub: curr&&l52 ? '+'+((curr/l52-1)*100).toFixed(1)+'% from low':'', subCls:'good' },
     'divider',
     // ── Valuation block ───────────────────────────────────────────────────
-    { label:'Stock P/E',    value: fun.pe != null ? fun.pe.toFixed(1)+'x':'—',
-      sub: fun.forwardPE != null ? 'Fwd P/E '+fun.forwardPE.toFixed(1)+'x':'' },
+    { label:'Stock P/E',    value: fun.pe ? fun.pe.toFixed(1)+'x':'—',
+      sub: fun.forwardPE ? 'Fwd P/E '+fun.forwardPE.toFixed(1)+'x':'' },
     { label:'Price / Book', value: fmtX(fun.pbRatio),
-      sub: fun.bookValue != null ? 'Book ₹'+fun.bookValue:'' },
-    { label:'EPS (TTM)',    value: fun.eps != null ? '₹'+fun.eps.toFixed(2):'—',
+      sub: fun.bookValue ? 'Book ₹'+fun.bookValue:'' },
+    { label:'EPS (TTM)',    value: fun.eps ? '₹'+fun.eps.toFixed(2):'—',
       valCls: qcls(fun.eps,0.01,-0.01) },
-    { label:'Div Yield',    value: fun.dividendYield != null ? (fun.dividendYield*100).toFixed(2)+'%':'—',
-      sub: fun.dividendRate != null ? '₹'+fun.dividendRate+' / share':'',
+    { label:'Div Yield',    value: fun.dividendYield ? (fun.dividendYield*100).toFixed(2)+'%':'—',
+      sub: fun.dividendRate ? '₹'+fun.dividendRate+' / share':'',
       valCls: qcls(fun.dividendYield,0.03,0) },
     'divider',
     // ── Quality block ─────────────────────────────────────────────────────
-    { label:'ROE',          value: fun.roe != null ? (fun.roe*100).toFixed(1)+'%':'—',
+    { label:'ROE',          value: fun.roe ? (fun.roe*100).toFixed(1)+'%':'—',
       valCls: qcls(fun.roe,0.15,0.05), sub:'Return on Equity' },
-    { label:'ROCE (ROA)',   value: fun.roce != null ? (fun.roce*100).toFixed(1)+'%':'—',
+    { label:'ROCE (ROA)',   value: fun.roce ? (fun.roce*100).toFixed(1)+'%':'—',
       valCls: qcls(fun.roce,0.10,0.02), sub:'Return on Assets' },
-    { label:'Op Margin',   value: fun.operatingMargin != null ? (fun.operatingMargin*100).toFixed(1)+'%':'—',
+    { label:'Op Margin',   value: fun.operatingMargin ? (fun.operatingMargin*100).toFixed(1)+'%':'—',
       valCls: qcls(fun.operatingMargin,0.15,0.05) },
     { label:'Debt / Equity',value: fmtX(fun.debtToEquity),
       valCls: fun.debtToEquity!=null?(fun.debtToEquity<0.5?'good':fun.debtToEquity>1.5?'bad':'neutral'):'' },
@@ -445,10 +455,10 @@ function renderScreenerMetrics(record) {
       valCls: qcls(fun.revenueGrowth,0.1,-0.05), sub:'YoY' },
     { label:'Profit Growth', value: fmtPct(fun.earningsGrowth),
       valCls: qcls(fun.earningsGrowth,0.1,-0.1), sub:'YoY' },
-    { label:'Analyst Target',value: fun.targetPrice != null ? '₹'+fun.targetPrice.toFixed(0):'—',
+    { label:'Analyst Target',value: fun.targetPrice ? '₹'+fun.targetPrice.toFixed(0):'—',
       sub: upside!=null?(upside>=0?'+':'')+upside.toFixed(1)+'% upside':'', subCls: upside!=null&&upside>=0?'good':'bad' },
     { label:'Consensus',     value: fun.recommendation ? fun.recommendation.toUpperCase().replace(/_/g,' '):'—',
-      sub: fun.analystCount != null ? fun.analystCount+' analysts':'',
+      sub: fun.analystCount ? fun.analystCount+' analysts':'',
       valCls: (fun.recommendation==='buy'||fun.recommendation==='strong_buy')?'good'
              :(fun.recommendation==='sell'||fun.recommendation==='underperform')?'bad':'neutral' },
   ];
@@ -462,7 +472,7 @@ function renderScreenerMetrics(record) {
   return `<div>
     <div class="metrics-header">
       <div class="section-title" style="margin-bottom:0">📊 Key Metrics</div>
-      <span class="metrics-source">Yahoo Finance</span>
+      <span class="metrics-source">Screener.in · as of ${fundDB[record.symbol]?.lastResultDate || "—"}</span>
     </div>
     <div class="screener-grid">${cellsHtml}</div>
   </div>`;
@@ -633,9 +643,9 @@ function renderTargets(d,upside) {
     ${t.average&&t.average!==p.current?`<div class="target-row"><div class="target-label">Analyst Tgt</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(t.average)}%;background:#2563eb"></div></div><div class="target-val">₹${t.average.toFixed(0)}</div></div>`:''}
     ${upside!=='—'?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">Upside to analyst target: <span style="color:var(--green);font-weight:700">+${upside}%</span></div>`:''}
     <div class="analyst-pills">
-      <div class="analyst-pill pill-buy"><div class="count">${d.analysts?.buy||0}</div><div class="lbl">Buy</div></div>
-      <div class="analyst-pill pill-hold"><div class="count">${d.analysts?.hold||0}</div><div class="lbl">Hold</div></div>
-      <div class="analyst-pill pill-sell"><div class="count">${d.analysts?.sell||0}</div><div class="lbl">Sell</div></div>
+      <div class="analyst-pill pill-buy"><div class="count">${(fundDB[d.symbol]?.analystBuy||d.analysts?.buy||0)}</div><div class="lbl">Buy</div></div>
+      <div class="analyst-pill pill-hold"><div class="count">${(fundDB[d.symbol]?.analystHold||d.analysts?.hold||0)}</div><div class="lbl">Hold</div></div>
+      <div class="analyst-pill pill-sell"><div class="count">${(fundDB[d.symbol]?.analystSell||d.analysts?.sell||0)}</div><div class="lbl">Sell</div></div>
     </div></div>`;
 }
 
@@ -703,9 +713,12 @@ function filterStocks(){
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return iso||'—';}}
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
-renderSidebar();
-const initWl=getWatchlist();
-if(initWl.length>0)selectStock(initWl[0]);
+// Load fundamentals DB then render
+loadFundamentals().then(() => {
+  renderSidebar();
+  const initWl=getWatchlist();
+  if(initWl.length>0)selectStock(initWl[0]);
+});
 </script>
 </body>
 </html>

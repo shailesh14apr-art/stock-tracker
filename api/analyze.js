@@ -1,21 +1,19 @@
 export const config = { runtime: 'edge' };
 
-const YF_CHART      = 'https://query1.finance.yahoo.com/v8/finance/chart';
-const NSE_QUOTE     = 'https://www.nseindia.com/api/quote-equity';
-const INDIANAPI_BASE = 'https://stock.indianapi.in';
+const YF_CHART = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
 const SECTOR_CONTEXT = {
-  railways:       'Indian railways/capital goods — key drivers: order book execution, EBITDA margin expansion, government capex cycle. Valuation anchor: P/E vs order book visibility.',
-  banking:        'Indian private/PSU banking — key drivers: NIM trajectory, GNPA trend, loan growth, ROE vs cost of equity. Watch: credit costs and CASA ratio.',
-  it:             'Indian IT services — key drivers: revenue growth (CC terms), EBIT margin, deal TCV wins, attrition normalisation. Valuation: P/E vs growth premium.',
-  fmcg:           'Indian FMCG — key drivers: volume growth vs price growth mix, rural recovery, gross margin trajectory. Valuation: premium P/E justified by consistency.',
-  pharma:         'Indian pharma — key drivers: US generics momentum, domestic formulations growth, R&D pipeline, USFDA compliance. Watch: price erosion in US.',
-  capital_markets:'Indian capital markets — key drivers: AUM growth, active client additions, market share in F&O. Highly correlated with market volumes and sentiment.',
-  real_estate:    'Indian real estate — key drivers: pre-sales momentum, collections, net debt trajectory, land bank. Valuation: NAV discount/premium.',
-  auto:           'Indian automobiles — key drivers: volume growth, EV transition pace, EBITDA margin, market share. Watch: commodity costs and rural demand.',
-  metals:         'Indian metals/mining — key drivers: spread per tonne, net debt/EBITDA, production volume. Highly cyclical — commodity price and China demand.',
-  energy:         'Indian energy/oil — key drivers: dividend yield, refining margins, upstream realisation, net debt. Regulatory risk: APM pricing.',
-  default:        'Indian equity — focus on earnings growth trajectory, valuation vs sector peers, and technical momentum confluence.'
+  railways:       'Indian railways/capital goods — order book execution, EBITDA margin expansion, government capex cycle.',
+  banking:        'Indian banking — NIM trajectory, GNPA trend, loan growth, ROE vs cost of equity.',
+  it:             'Indian IT services — revenue growth (CC terms), EBIT margin, deal wins, attrition.',
+  fmcg:           'Indian FMCG — volume growth mix, rural recovery, gross margin trajectory.',
+  pharma:         'Indian pharma — US generics, domestic formulations, R&D pipeline, USFDA compliance.',
+  capital_markets:'Indian capital markets — AUM growth, active clients, F&O market share.',
+  real_estate:    'Indian real estate — pre-sales, collections, net debt, land bank.',
+  auto:           'Indian auto — volume growth, EV transition, EBITDA margin, commodity costs.',
+  metals:         'Indian metals — spread per tonne, net debt/EBITDA, production. Highly cyclical.',
+  energy:         'Indian energy — dividend yield, refining margins, upstream realisation.',
+  default:        'Indian equity — earnings growth, valuation vs peers, technical momentum.'
 };
 
 export default async function handler(req) {
@@ -31,214 +29,43 @@ export default async function handler(req) {
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
 
+  // fundamentals passed from frontend (loaded from static fundamentals.json)
+  let fund = {};
+  try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
+
   if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-  if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set in Vercel env vars' }, 500, cors);
+  if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set' }, 500, cors);
 
   try {
     const yahooSym = symbol.toUpperCase() + '.NS';
     const today    = new Date();
     const oneYrAgo = new Date(today); oneYrAgo.setFullYear(today.getFullYear() - 1);
-    const period1  = Math.floor(oneYrAgo / 1000);
-    const period2  = Math.floor(today / 1000);
 
-    // ── 1. Parallel fetch: chart + quote (fundamentals) ───────────────────
-    const [chartRes, quoteRes] = await Promise.all([
-      fetch(
-        `${YF_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${period1}&period2=${period2}`,
-        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
-      ),
-      fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`,
-        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(8000) }
-      )
-    ]);
+    // ── 1. Fetch 1yr daily chart (technicals only) ────────────────────────
+    const chartRes = await fetch(
+      `${YF_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${Math.floor(oneYrAgo/1000)}&period2=${Math.floor(today/1000)}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!chartRes.ok) throw new Error(`Yahoo Finance: HTTP ${chartRes.status}`);
 
-    if (!chartRes.ok) throw new Error(`Yahoo Finance chart: HTTP ${chartRes.status}`);
     const chartData = await chartRes.json();
     const result    = chartData?.chart?.result?.[0];
     if (!result) throw new Error(chartData?.chart?.error?.description || `No chart data for ${symbol}`);
 
-    const timestamps = result.timestamp || [];
-    const q0         = result.indicators?.quote?.[0] || {};
-    const rows       = timestamps
+    const q0      = result.indicators?.quote?.[0] || {};
+    const rows    = (result.timestamp || [])
       .map((ts, i) => ({ close: q0.close?.[i], volume: q0.volume?.[i] ?? 0 }))
       .filter(r => r.close != null);
     const closes  = rows.map(r => r.close);
     const volumes = rows.map(r => r.volume);
 
-    if (closes.length < 20) throw new Error(`Only ${closes.length} data points for ${symbol} — need 20+`);
+    if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
-    const parseQuoteFundamentals = q => {
-      const mcap = q.marketCap ?? null;
-      const pb   = q.priceToBook ?? null;
-      const curr = closes.at(-1);
-      return {
-        pe:              q.trailingPE             ?? null,
-        forwardPE:       q.forwardPE              ?? null,
-        pbRatio:         pb,
-        bookValue:       q.bookValue              ?? (pb && curr ? +(curr / pb).toFixed(2) : null),
-        eps:             q.epsTrailingTwelveMonths ?? null,
-        evEbitda:        q.enterpriseToEbitda      ?? null,
-        roe:             q.returnOnEquity          ?? null,
-        roce:            q.returnOnAssets          ?? null,
-        operatingMargin: q.operatingMargins        ?? null,
-        revenueGrowth:   q.revenueGrowth           ?? null,
-        earningsGrowth:  q.earningsGrowth          ?? null,
-        debtToEquity:    q.debtToEquity            ?? null,
-        dividendYield:   q.dividendYield           ?? null,
-        dividendRate:    q.dividendRate            ?? null,
-        marketCap:       mcap,
-        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
-        targetPrice:     q.targetMeanPrice         ?? null,
-        targetHigh:      q.targetHighPrice         ?? null,
-        targetLow:       q.targetLowPrice          ?? null,
-        analystCount:    q.numberOfAnalystOpinions ?? null,
-        recommendation:  q.recommendationKey       ?? null,
-      };
-    };
-
-    const parseSummaryFundamentals = async () => {
-      const summaryRes = await fetch(
-        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=price,summaryDetail,defaultKeyStatistics,financialData`,
-        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) }
-      );
-      if (!summaryRes.ok) return null;
-      const sj = await summaryRes.json();
-      const s  = sj?.quoteSummary?.result?.[0] || {};
-      const price = s.price || {};
-      const summary = s.summaryDetail || {};
-      const stats = s.defaultKeyStatistics || {};
-      const fin = s.financialData || {};
-      const mcap = price.marketCap ?? null;
-      const pb   = price.priceToBook ?? summary.priceToBook ?? null;
-      const curr = closes.at(-1);
-      return {
-        pe:              price.trailingPE               ?? null,
-        forwardPE:       price.forwardPE                ?? null,
-        pbRatio:         pb,
-        bookValue:       price.bookValue               ?? stats.bookValue ?? (pb && curr ? +(curr / pb).toFixed(2) : null),
-        eps:             price.trailingEps              ?? null,
-        evEbitda:        fin.enterpriseToEbitda        ?? null,
-        roe:             stats.returnOnEquity          ?? null,
-        roce:            fin.returnOnAssets            ?? null,
-        operatingMargin: fin.operatingMargins          ?? null,
-        revenueGrowth:   fin.revenueGrowth             ?? null,
-        earningsGrowth:  fin.earningsGrowth            ?? null,
-        debtToEquity:    stats.debtToEquity            ?? null,
-        dividendYield:   summary.dividendYield         ?? null,
-        dividendRate:    summary.dividendRate          ?? null,
-        marketCap:       mcap,
-        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
-        targetPrice:     fin.targetMeanPrice           ?? null,
-        targetHigh:      fin.targetHighPrice          ?? null,
-        targetLow:       fin.targetLowPrice           ?? null,
-        analystCount:    fin.numberOfAnalystOpinions   ?? null,
-        recommendation:  fin.recommendationKey         ?? null,
-      };
-    };
-
-    const parseIndianApiFundamentals = async () => {
-      const key = process.env.INDIANAPI_KEY;
-      if (!key) return null;
-      const indianRes = await fetch(
-        `${INDIANAPI_BASE}/stock?name=${encodeURIComponent(name)}`,
-        {
-          headers: {
-            'x-api-key': key,
-            'Accept': 'application/json'
-          },
-          signal: AbortSignal.timeout(10000)
-        }
-      );
-      if (!indianRes.ok) return null;
-      const ij = await indianRes.json();
-      const data = ij?.data || ij?.result || ij;
-      const mcap = data.marketCap ?? data.marketCapValue ?? data.marketCapitalization ?? null;
-      const curr = closes.at(-1);
-      return {
-        pe:              data.pe ?? data.trailingPE ?? data.pe_ttm ?? null,
-        forwardPE:       data.forwardPE ?? data.fwdPE ?? null,
-        pbRatio:         data.priceToBook ?? data.pb ?? data.ptb ?? null,
-        bookValue:       data.bookValue ?? data.bookValuePerShare ?? null,
-        eps:             data.eps ?? data.epsTTM ?? data.eps_ttm ?? null,
-        evEbitda:        data.evEbitda ?? data.enterpriseToEbitda ?? null,
-        roe:             data.roe ?? data.returnOnEquity ?? null,
-        roce:            data.roce ?? data.returnOnAssets ?? null,
-        operatingMargin: data.operatingMargin ?? data.operatingMargins ?? null,
-        revenueGrowth:   data.revenueGrowth ?? data.revenueGrowthYoY ?? data.revenue_growth ?? null,
-        earningsGrowth:  data.earningsGrowth ?? data.netProfitGrowth ?? data.earnings_growth ?? null,
-        debtToEquity:    data.debtToEquity ?? data.debtEquity ?? data.debt_to_equity ?? null,
-        dividendYield:   data.dividendYield ?? data.dividend_yield ?? null,
-        dividendRate:    data.dividendRate ?? null,
-        marketCap:       mcap,
-        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
-        targetPrice:     data.targetPrice ?? data.target_price ?? null,
-        targetHigh:      data.targetHigh ?? data.targetHighPrice ?? null,
-        targetLow:       data.targetLow ?? data.targetLowPrice ?? null,
-        analystCount:    data.analystCount ?? data.numberOfAnalystOpinions ?? null,
-        recommendation:  data.recommendation ?? data.recommendationKey ?? null,
-      };
-    };
-
-    const parseNseFundamentals = async () => {
-      const nseRes = await fetch(
-        `${NSE_QUOTE}?symbol=${encodeURIComponent(symbol.toUpperCase())}`,
-        {
-          headers: {
-            'User-Agent': 'Mozilla/5.0',
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
-            'Referer': `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(symbol.toUpperCase())}`
-          },
-          signal: AbortSignal.timeout(10000)
-        }
-      );
-      if (!nseRes.ok) return null;
-      const nj = await nseRes.json();
-      const priceInfo = nj.priceInfo || {};
-      const metadata  = nj.metadata  || {};
-      const security  = nj.securityInfo || {};
-      const lastPrice = priceInfo.lastPrice ?? null;
-      const issued    = security.issuedSize ?? null;
-      const mcap      = priceInfo.marketCap ?? (lastPrice != null && issued != null ? lastPrice * issued : null);
-      return {
-        pe:              metadata.pdSymbolPe ?? null,
-        marketCap:       mcap,
-        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
-        targetPrice:     null,
-        targetHigh:      null,
-        targetLow:       null,
-        analystCount:    null,
-        recommendation:  null,
-      };
-    };
-
-    let fund = {};
-    try {
-      if (quoteRes.ok) {
-        const qj = await quoteRes.json();
-        const q  = qj?.quoteResponse?.result?.[0];
-        if (q) fund = parseQuoteFundamentals(q);
-      }
-      if ((!fund.marketCap && !fund.pe && !fund.pbRatio) || !quoteRes.ok) {
-        const fallbackFund = await parseSummaryFundamentals();
-        if (fallbackFund) fund = { ...fund, ...fallbackFund };
-      }
-      if (!fund.marketCap && !fund.pe) {
-        const indianFund = await parseIndianApiFundamentals();
-        if (indianFund) fund = { ...fund, ...indianFund };
-      }
-      if (!fund.marketCap && !fund.pe) {
-        const nseFund = await parseNseFundamentals();
-        if (nseFund) fund = { ...fund, ...nseFund };
-      }
-    } catch (_) { /* fundamentals optional */ }
-
-    // ── 3. Technical indicators ───────────────────────────────────────────
+    // ── 2. Technical indicators ───────────────────────────────────────────
     const price      = closes.at(-1);
-    const prev       = closes.at(-2);
-    const changePct  = ((price - prev) / prev) * 100;
+    const changePct  = ((price - closes.at(-2)) / closes.at(-2)) * 100;
     const sma20      = avg(closes.slice(-20));
     const sma50      = closes.length >= 50 ? avg(closes.slice(-50)) : null;
     const macd       = ema(closes, 12) - ema(closes, 26);
@@ -246,18 +73,19 @@ export default async function handler(req) {
       if (i < 12) return null;
       return ema(a.slice(0, i+1), 12) - ema(a.slice(0, i+1), 26);
     }).filter(x => x !== null), 9);
-    const rsi        = calcRSI(closes);
-    const high52w    = Math.max(...closes);
-    const low52w     = Math.min(...closes);
-    const change30d  = closes.length >= 30 ? ((closes.at(-1) - closes.at(-30)) / closes.at(-30)) * 100 : null;
-    const avgVol20   = avg(volumes.slice(-20));
-    const volRatio   = avgVol20 > 0 ? (volumes.at(-1) || avgVol20) / avgVol20 : 1;
-    const stddev20   = Math.sqrt(avg(closes.slice(-20).map(c => Math.pow(c - sma20, 2))));
-    const bbUpper    = sma20 + 2 * stddev20;
-    const bbLower    = sma20 - 2 * stddev20;
-    const bbPct      = stddev20 > 0 ? ((price - bbLower) / (bbUpper - bbLower)) * 100 : 50;
+    const rsi       = calcRSI(closes);
+    const high52w   = Math.max(...closes);
+    const low52w    = Math.min(...closes);
+    const change30d = closes.length >= 30
+      ? ((closes.at(-1) - closes.at(-30)) / closes.at(-30)) * 100 : null;
+    const avgVol20  = avg(volumes.slice(-20));
+    const volRatio  = avgVol20 > 0 ? (volumes.at(-1) || avgVol20) / avgVol20 : 1;
+    const stddev20  = Math.sqrt(avg(closes.slice(-20).map(c => Math.pow(c - sma20, 2))));
+    const bbUpper   = sma20 + 2 * stddev20;
+    const bbLower   = sma20 - 2 * stddev20;
+    const bbPct     = stddev20 > 0 ? ((price - bbLower) / (bbUpper - bbLower)) * 100 : 50;
 
-    // ── 4. Signal score ───────────────────────────────────────────────────
+    // ── 3. Signal score ───────────────────────────────────────────────────
     const scores = {
       trend:    price > sma20 && (!sma50 || price > sma50) ? 2 : price > sma20 ? 1 : sma50 && price > sma50 ? -1 : -2,
       momentum: rsi > 55 && rsi < 70 ? 2 : rsi > 70 ? -1 : rsi < 35 ? 2 : rsi < 45 ? -1 : 0,
@@ -268,52 +96,48 @@ export default async function handler(req) {
       return30d: change30d != null ? (change30d > 10 ? 2 : change30d > 0 ? 1 : change30d > -10 ? -1 : -2) : 0,
     };
     const techScore     = Object.values(scores).reduce((a, b) => a + b, 0);
-    const techScoreNorm = ((techScore + 14) / 28 * 10).toFixed(1);
+    const techScoreNorm = +((techScore + 14) / 28 * 10).toFixed(1);
 
-    // ── 5. Claude prompt ──────────────────────────────────────────────────
-    const smaLine    = (v, l) => v != null ? `- ${l}: ₹${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)` : '';
-    const scoreLines = Object.entries(scores).map(([k, v]) => `  ${k.padEnd(10)}: ${v > 0 ? '+' : ''}${v}`).join('\n');
-    const fundLines  = [
-      fund.pe             != null ? `- Trailing P/E: ${fund.pe.toFixed(1)}x${fund.forwardPE ? ` | Forward P/E: ${fund.forwardPE.toFixed(1)}x` : ''}` : '',
-      fund.pbRatio        != null ? `- Price/Book: ${fund.pbRatio.toFixed(2)}x` : '',
-      fund.roe            != null ? `- ROE: ${(fund.roe * 100).toFixed(1)}%` : '',
-      fund.revenueGrowth  != null ? `- Revenue Growth (YoY): ${(fund.revenueGrowth * 100).toFixed(1)}%` : '',
-      fund.earningsGrowth != null ? `- Earnings Growth (YoY): ${(fund.earningsGrowth * 100).toFixed(1)}%` : '',
-      fund.operatingMargin!= null ? `- Operating Margin: ${(fund.operatingMargin * 100).toFixed(1)}%` : '',
-      fund.debtToEquity   != null ? `- Debt/Equity: ${fund.debtToEquity.toFixed(2)}x` : '',
-      fund.dividendYield  != null ? `- Dividend Yield: ${(fund.dividendYield * 100).toFixed(2)}%` : '',
-      fund.targetPrice    != null ? `- Analyst Target: ₹${fund.targetPrice.toFixed(0)}${fund.analystCount ? ` (${fund.analystCount} analysts, consensus: ${fund.recommendation?.toUpperCase()})` : ''}` : '',
+    // ── 4. Claude prompt ──────────────────────────────────────────────────
+    const smaLine = (v, l) => v != null
+      ? `- ${l}: ₹${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
+      : '';
+
+    const fundLines = [
+      fund.pe             != null ? `- P/E: ${fund.pe}x${fund.forwardPE ? ` | Fwd P/E: ${fund.forwardPE}x` : ''}` : '',
+      fund.roe            != null ? `- ROE: ${fund.roe}% | ROCE: ${fund.roce ?? 'N/A'}%` : '',
+      fund.revenueGrowth  != null ? `- Revenue Growth: +${fund.revenueGrowth}% YoY | Earnings Growth: ${fund.earningsGrowth != null ? '+'+fund.earningsGrowth+'%' : 'N/A'}` : '',
+      fund.operatingMargin!= null ? `- Operating Margin: ${fund.operatingMargin}%` : '',
+      fund.debtToEquity   != null ? `- D/E: ${fund.debtToEquity}x` : '',
+      fund.targetPrice    != null ? `- Analyst Target: ₹${fund.targetPrice} (${fund.analystCount ?? '?'} analysts, consensus: ${(fund.recommendation||'').toUpperCase()})` : '',
     ].filter(Boolean).join('\n');
 
-    const prompt = `You are a senior equity analyst covering Indian markets with deep expertise in ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
+    const prompt = `You are a senior equity analyst covering Indian markets.
+Sector expertise: ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
 
-Analyse ${name} (NSE: ${symbol}) using the data below. Signal must be based on CONFLUENCE — multiple confirming factors.
+Analyse ${name} (NSE: ${symbol}) — signal must reflect CONFLUENCE of multiple factors.
 
 ━━━ TECHNICAL DATA ━━━
 - Price: ₹${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today)
 ${smaLine(sma20, '20-day SMA')}
 ${smaLine(sma50, '50-day SMA')}
 - RSI(14): ${rsi.toFixed(1)} — ${rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : rsi < 45 ? 'weakening' : 'healthy'}
-- MACD: ${macd.toFixed(2)} vs Signal ${macdSignal.toFixed(2)} → ${macd > macdSignal ? 'BULLISH crossover' : 'BEARISH crossover'}
-- BB position: ${bbPct.toFixed(0)}% — ${bbPct < 20 ? 'near lower band (oversold)' : bbPct > 80 ? 'near upper band (extended)' : 'mid-band'}
+- MACD: ${macd.toFixed(2)} vs Signal ${macdSignal.toFixed(2)} → ${macd > macdSignal ? 'BULLISH' : 'BEARISH'} crossover
+- BB position: ${bbPct.toFixed(0)}% — ${bbPct < 20 ? 'near lower band' : bbPct > 80 ? 'near upper band (extended)' : 'mid-band'}
 - 30d return: ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'}
 - 52w range: ₹${low52w.toFixed(2)} – ₹${high52w.toFixed(2)} | at ${(((price-low52w)/(high52w-low52w))*100).toFixed(0)}% of range
 - Volume vs 20d avg: ${(volRatio*100).toFixed(0)}%${volRatio > 1.5 ? ' (HIGH conviction)' : volRatio < 0.6 ? ' (LOW conviction)' : ''}
 
 ━━━ SIGNAL SCORE: ${techScoreNorm}/10 ━━━
-${scoreLines}
-→ ${techScore >= 6 ? 'Strong bullish confluence' : techScore >= 2 ? 'Mild bullish bias' : techScore >= -2 ? 'Neutral/mixed' : techScore >= -6 ? 'Mild bearish' : 'Strong bearish'}
+→ ${techScore >= 6 ? 'Strong bullish' : techScore >= 2 ? 'Mild bullish' : techScore >= -2 ? 'Neutral/mixed' : techScore >= -6 ? 'Mild bearish' : 'Strong bearish'}
 
-━━━ FUNDAMENTALS ━━━
-${fundLines || '(unavailable — base signal on technicals only)'}
-
-━━━ SECTOR CONTEXT ━━━
-${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
+━━━ FUNDAMENTALS (from company filings) ━━━
+${fundLines || '(not available in database yet)'}
 
 Reply ONLY with valid JSON, no markdown:
-{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences: technical score + key fundamental + sector context","technicalPoints":["signal 1","signal 2","signal 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook with specific trigger to watch","keyRisk":"single biggest risk to this view"}`;
+{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences referencing score, key technicals and fundamentals","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook with specific trigger","keyRisk":"biggest risk to this view"}`;
 
-    // ── 6. Claude ─────────────────────────────────────────────────────────
+    // ── 5. Call Claude ─────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -344,9 +168,8 @@ Reply ONLY with valid JSON, no markdown:
         bbUpper: +bbUpper.toFixed(2), bbLower: +bbLower.toFixed(2), bbPct: +bbPct.toFixed(1),
         change30d: change30d !== null ? +change30d.toFixed(2) : null,
         high52w: +high52w.toFixed(2), low52w: +low52w.toFixed(2),
-        volRatio: +volRatio.toFixed(2), techScore: +techScoreNorm, scores,
+        volRatio: +volRatio.toFixed(2), techScore: techScoreNorm, scores,
       },
-      fundamentals: fund,
       analysis,
       fetchedAt: new Date().toISOString()
     }, 200, cors);
