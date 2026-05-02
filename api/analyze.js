@@ -1,7 +1,8 @@
 export const config = { runtime: 'edge' };
 
-const YF_CHART   = 'https://query1.finance.yahoo.com/v8/finance/chart';
-const NSE_QUOTE  = 'https://www.nseindia.com/api/quote-equity';
+const YF_CHART      = 'https://query1.finance.yahoo.com/v8/finance/chart';
+const NSE_QUOTE     = 'https://www.nseindia.com/api/quote-equity';
+const INDIANAPI_BASE = 'https://stock.indianapi.in';
 
 const SECTOR_CONTEXT = {
   railways:       'Indian railways/capital goods — key drivers: order book execution, EBITDA margin expansion, government capex cycle. Valuation anchor: P/E vs order book visibility.',
@@ -138,6 +139,49 @@ export default async function handler(req) {
       };
     };
 
+    const parseIndianApiFundamentals = async () => {
+      const key = process.env.INDIANAPI_KEY;
+      if (!key) return null;
+      const indianRes = await fetch(
+        `${INDIANAPI_BASE}/stock?name=${encodeURIComponent(name)}`,
+        {
+          headers: {
+            'x-api-key': key,
+            'Accept': 'application/json'
+          },
+          signal: AbortSignal.timeout(10000)
+        }
+      );
+      if (!indianRes.ok) return null;
+      const ij = await indianRes.json();
+      const data = ij?.data || ij?.result || ij;
+      const mcap = data.marketCap ?? data.marketCapValue ?? data.marketCapitalization ?? null;
+      const curr = closes.at(-1);
+      return {
+        pe:              data.pe ?? data.trailingPE ?? data.pe_ttm ?? null,
+        forwardPE:       data.forwardPE ?? data.fwdPE ?? null,
+        pbRatio:         data.priceToBook ?? data.pb ?? data.ptb ?? null,
+        bookValue:       data.bookValue ?? data.bookValuePerShare ?? null,
+        eps:             data.eps ?? data.epsTTM ?? data.eps_ttm ?? null,
+        evEbitda:        data.evEbitda ?? data.enterpriseToEbitda ?? null,
+        roe:             data.roe ?? data.returnOnEquity ?? null,
+        roce:            data.roce ?? data.returnOnAssets ?? null,
+        operatingMargin: data.operatingMargin ?? data.operatingMargins ?? null,
+        revenueGrowth:   data.revenueGrowth ?? data.revenueGrowthYoY ?? data.revenue_growth ?? null,
+        earningsGrowth:  data.earningsGrowth ?? data.netProfitGrowth ?? data.earnings_growth ?? null,
+        debtToEquity:    data.debtToEquity ?? data.debtEquity ?? data.debt_to_equity ?? null,
+        dividendYield:   data.dividendYield ?? data.dividend_yield ?? null,
+        dividendRate:    data.dividendRate ?? null,
+        marketCap:       mcap,
+        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
+        targetPrice:     data.targetPrice ?? data.target_price ?? null,
+        targetHigh:      data.targetHigh ?? data.targetHighPrice ?? null,
+        targetLow:       data.targetLow ?? data.targetLowPrice ?? null,
+        analystCount:    data.analystCount ?? data.numberOfAnalystOpinions ?? null,
+        recommendation:  data.recommendation ?? data.recommendationKey ?? null,
+      };
+    };
+
     const parseNseFundamentals = async () => {
       const nseRes = await fetch(
         `${NSE_QUOTE}?symbol=${encodeURIComponent(symbol.toUpperCase())}`,
@@ -180,6 +224,10 @@ export default async function handler(req) {
       if ((!fund.marketCap && !fund.pe && !fund.pbRatio) || !quoteRes.ok) {
         const fallbackFund = await parseSummaryFundamentals();
         if (fallbackFund) fund = { ...fund, ...fallbackFund };
+      }
+      if (!fund.marketCap && !fund.pe) {
+        const indianFund = await parseIndianApiFundamentals();
+        if (indianFund) fund = { ...fund, ...indianFund };
       }
       if (!fund.marketCap && !fund.pe) {
         const nseFund = await parseNseFundamentals();
