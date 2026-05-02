@@ -1,6 +1,7 @@
 export const config = { runtime: 'edge' };
 
 const YF_CHART   = 'https://query1.finance.yahoo.com/v8/finance/chart';
+const NSE_QUOTE  = 'https://www.nseindia.com/api/quote-equity';
 
 const SECTOR_CONTEXT = {
   railways:       'Indian railways/capital goods — key drivers: order book execution, EBITDA margin expansion, government capex cycle. Valuation anchor: P/E vs order book visibility.',
@@ -137,6 +138,38 @@ export default async function handler(req) {
       };
     };
 
+    const parseNseFundamentals = async () => {
+      const nseRes = await fetch(
+        `${NSE_QUOTE}?symbol=${encodeURIComponent(symbol.toUpperCase())}`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Referer': `https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(symbol.toUpperCase())}`
+          },
+          signal: AbortSignal.timeout(10000)
+        }
+      );
+      if (!nseRes.ok) return null;
+      const nj = await nseRes.json();
+      const priceInfo = nj.priceInfo || {};
+      const metadata  = nj.metadata  || {};
+      const security  = nj.securityInfo || {};
+      const lastPrice = priceInfo.lastPrice ?? null;
+      const issued    = security.issuedSize ?? null;
+      const mcap      = priceInfo.marketCap ?? (lastPrice != null && issued != null ? lastPrice * issued : null);
+      return {
+        pe:              metadata.pdSymbolPe ?? null,
+        marketCap:       mcap,
+        marketCapCr:     mcap != null ? +(mcap / 1e7).toFixed(0) : null,
+        targetPrice:     null,
+        targetHigh:      null,
+        targetLow:       null,
+        analystCount:    null,
+        recommendation:  null,
+      };
+    };
+
     let fund = {};
     try {
       if (quoteRes.ok) {
@@ -144,9 +177,13 @@ export default async function handler(req) {
         const q  = qj?.quoteResponse?.result?.[0];
         if (q) fund = parseQuoteFundamentals(q);
       }
-      if (!fund.marketCap && !fund.pe && !fund.pbRatio) {
+      if ((!fund.marketCap && !fund.pe && !fund.pbRatio) || !quoteRes.ok) {
         const fallbackFund = await parseSummaryFundamentals();
         if (fallbackFund) fund = { ...fund, ...fallbackFund };
+      }
+      if (!fund.marketCap && !fund.pe) {
+        const nseFund = await parseNseFundamentals();
+        if (nseFund) fund = { ...fund, ...nseFund };
       }
     } catch (_) { /* fundamentals optional */ }
 
