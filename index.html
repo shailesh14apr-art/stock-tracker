@@ -409,7 +409,7 @@ function renderScreenerMetrics(record) {
   const p   = record.price         || {};
 
   const fmtCr  = v => { if(v==null)return '—'; if(v>=100000)return (v/100000).toFixed(1)+'L Cr'; if(v>=1000)return (v/1000).toFixed(1)+'K Cr'; return v.toFixed(0)+' Cr'; };
-  const fmtPct = v => v!=null ? (v*100>=0?'+':'')+(v*100).toFixed(1)+'%' : '—';
+  const fmtPct = v => v!=null ? (v>=0?'+':'')+(v).toFixed(1)+'%' : '—';
   const fmtX   = v => v!=null ? v.toFixed(2)+'x' : '—';
   const qcls   = (v,hi,lo) => v==null?'':v>=hi?'good':v<=lo?'bad':'neutral';
 
@@ -441,11 +441,11 @@ function renderScreenerMetrics(record) {
       valCls: qcls(fun.dividendYield,0.03,0) },
     'divider',
     // ── Quality block ─────────────────────────────────────────────────────
-    { label:'ROE',          value: fun.roe ? (fun.roe*100).toFixed(1)+'%':'—',
+    { label:'ROE',          value: fun.roe ? fun.roe.toFixed(1)+'%':'—',
       valCls: qcls(fun.roe,0.15,0.05), sub:'Return on Equity' },
-    { label:'ROCE (ROA)',   value: fun.roce ? (fun.roce*100).toFixed(1)+'%':'—',
+    { label:'ROCE (ROA)',   value: fun.roce ? fun.roce.toFixed(1)+'%':'—',
       valCls: qcls(fun.roce,0.10,0.02), sub:'Return on Assets' },
-    { label:'Op Margin',   value: fun.operatingMargin ? (fun.operatingMargin*100).toFixed(1)+'%':'—',
+    { label:'Op Margin',   value: fun.operatingMargin ? fun.operatingMargin.toFixed(1)+'%':'—',
       valCls: qcls(fun.operatingMargin,0.15,0.05) },
     { label:'Debt / Equity',value: fmtX(fun.debtToEquity),
       valCls: fun.debtToEquity!=null?(fun.debtToEquity<0.5?'good':fun.debtToEquity>1.5?'bad':'neutral'):'' },
@@ -498,9 +498,9 @@ function renderAICard(record) {
     fun.pe!=null?{label:'P/E',val:fun.pe.toFixed(1)+'x'}:null,
     fun.forwardPE!=null?{label:'Fwd P/E',val:fun.forwardPE.toFixed(1)+'x'}:null,
     fun.pbRatio!=null?{label:'P/B',val:fun.pbRatio.toFixed(2)+'x'}:null,
-    fun.roe!=null?{label:'ROE',val:(fun.roe*100).toFixed(1)+'%'}:null,
-    fun.revenueGrowth!=null?{label:'Rev Growth',val:(fun.revenueGrowth>=0?'+':'')+(fun.revenueGrowth*100).toFixed(1)+'%'}:null,
-    fun.operatingMargin!=null?{label:'Op Margin',val:(fun.operatingMargin*100).toFixed(1)+'%'}:null,
+    fun.roe!=null?{label:'ROE',val:fun.roe.toFixed(1)+'%'}:null,
+    fun.revenueGrowth!=null?{label:'Rev Growth',val:(fun.revenueGrowth>=0?'+':'')+fun.revenueGrowth.toFixed(1)+'%'}:null,
+    fun.operatingMargin!=null?{label:'Op Margin',val:fun.operatingMargin.toFixed(1)+'%'}:null,
     fun.debtToEquity!=null?{label:'D/E',val:fun.debtToEquity.toFixed(2)+'x'}:null,
     fun.targetPrice!=null?{label:'Analyst Target',val:'₹'+fun.targetPrice.toFixed(0),highlight:true}:null,
   ].filter(Boolean);
