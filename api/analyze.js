@@ -29,7 +29,7 @@ export default async function handler(req) {
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
 
-  // fundamentals passed from frontend (loaded from static fundamentals.json)
+  // fundamentals passed from frontend (quarterlyResults stripped client-side to keep URL short)
   let fund = {};
   try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
 
@@ -43,7 +43,7 @@ export default async function handler(req) {
     const today    = new Date();
     const oneYrAgo = new Date(today); oneYrAgo.setFullYear(today.getFullYear() - 1);
 
-    // ── 1. Fetch 1yr daily chart (technicals only) ────────────────────────
+    // ── 1. Fetch 1yr daily OHLCV ──────────────────────────────────────────
     const chartRes = await fetch(
       `${YF_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${Math.floor(oneYrAgo/1000)}&period2=${Math.floor(today/1000)}`,
       { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
@@ -54,12 +54,21 @@ export default async function handler(req) {
     const result    = chartData?.chart?.result?.[0];
     if (!result) throw new Error(chartData?.chart?.error?.description || `No chart data for ${symbol}`);
 
-    const q0      = result.indicators?.quote?.[0] || {};
-    const rows    = (result.timestamp || [])
-      .map((ts, i) => ({ close: q0.close?.[i], volume: q0.volume?.[i] ?? 0 }))
-      .filter(r => r.close != null);
-    const closes  = rows.map(r => r.close);
-    const volumes = rows.map(r => r.volume);
+    const q0   = result.indicators?.quote?.[0] || {};
+    // Full OHLCV rows — t in ms for Chart.js timeseries scale
+    const rows = (result.timestamp || [])
+      .map((ts, i) => ({
+        t: ts * 1000,
+        o: q0.open?.[i],
+        h: q0.high?.[i],
+        l: q0.low?.[i],
+        c: q0.close?.[i],
+        v: q0.volume?.[i] ?? 0,
+      }))
+      .filter(r => r.c != null && r.o != null && r.h != null && r.l != null);
+
+    const closes  = rows.map(r => r.c);
+    const volumes = rows.map(r => r.v);
 
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
@@ -98,7 +107,12 @@ export default async function handler(req) {
     const techScore     = Object.values(scores).reduce((a, b) => a + b, 0);
     const techScoreNorm = +((techScore + 14) / 28 * 10).toFixed(1);
 
-    // ── 4. Claude prompt ──────────────────────────────────────────────────
+    // ── 4. EMA series for chart overlays ─────────────────────────────────
+    const ema20Series  = emaSeriesArr(closes, 20);
+    const ema50Series  = closes.length >= 50  ? emaSeriesArr(closes, 50)  : null;
+    const ema200Series = closes.length >= 200 ? emaSeriesArr(closes, 200) : null;
+
+    // ── 5. Claude prompt ──────────────────────────────────────────────────
     const smaLine = (v, l) => v != null
       ? `- ${l}: ₹${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
       : '';
@@ -137,7 +151,7 @@ ${fundLines || '(not available in database yet)'}
 Reply ONLY with valid JSON, no markdown:
 {"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences referencing score, key technicals and fundamentals","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook with specific trigger","keyRisk":"biggest risk to this view"}`;
 
-    // ── 5. Call Claude ─────────────────────────────────────────────────────
+    // ── 6. Call Claude ─────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -171,6 +185,10 @@ Reply ONLY with valid JSON, no markdown:
         volRatio: +volRatio.toFixed(2), techScore: techScoreNorm, scores,
       },
       analysis,
+      ohlcv: rows,
+      ema20Series,
+      ema50Series,
+      ema200Series,
       fetchedAt: new Date().toISOString()
     }, 200, cors);
 
@@ -192,4 +210,12 @@ function calcRSI(c, p=14) {
   let g=0, l=0;
   for (let i=c.length-p; i<c.length; i++) { const d=c[i]-c[i-1]; if(d>0) g+=d; else l-=d; }
   return 100-100/(1+(g/p)/((l/p)||0.001));
+}
+// Returns full EMA series aligned with closes array; values before period are null
+function emaSeriesArr(c, p) {
+  const k = 2/(p+1), res = new Array(c.length).fill(null);
+  if (c.length < p) return res;
+  res[p-1] = avg(c.slice(0, p));
+  for (let i = p; i < c.length; i++) res[i] = c[i]*k + res[i-1]*(1-k);
+  return res;
 }
