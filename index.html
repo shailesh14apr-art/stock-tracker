@@ -405,7 +405,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
   <div class="modal">
     <div class="modal-header"><span class="modal-title">Add Stock to Watchlist</span><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="modal-search-wrap"><input class="modal-search" id="modal-search" placeholder="Search by symbol or company name…" oninput="filterStocks()"/></div>
+    <div class="modal-search-wrap"><input class="modal-search" id="modal-search" placeholder="Search stocks or enter any symbol…" oninput="filterStocks()"/></div>
     <div class="modal-list" id="modal-list"></div>
     <div class="modal-note">⚡ Live AI analysis — fetches Yahoo Finance data + calls Claude Sonnet. ~20 seconds. Results cached locally.</div>
   </div>
@@ -935,8 +935,13 @@ function openModal(){filterStocks();document.getElementById('modal').classList.a
 function closeModal(){document.getElementById('modal').classList.remove('open');}
 function handleOverlayClick(e){if(e.target===document.getElementById('modal'))closeModal();}
 function filterStocks(){
-  const q=document.getElementById('modal-search').value.toLowerCase(), wl=getWatchlist();
-  const items=KNOWN_STOCKS.filter(s=>!q||s.symbol.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
+  const q=document.getElementById('modal-search').value.toLowerCase().trim(), wl=getWatchlist();
+  let items=KNOWN_STOCKS.filter(s=>!q||s.symbol.toLowerCase().includes(q)||s.name.toLowerCase().includes(q));
+  const hasExactMatch = KNOWN_STOCKS.some(s => s.symbol.toLowerCase() === q);
+  const alreadyInWatchlist = wl.includes(q.toUpperCase());
+  if (q && !hasExactMatch && !alreadyInWatchlist) {
+    items.unshift({symbol: q.toUpperCase(), name: q.toUpperCase(), sector: 'default'});
+  }
   document.getElementById('modal-list').innerHTML=items.map(s=>{
     const already=wl.includes(s.symbol), c=INDUSTRY_CONFIG[s.sector];
     return`<div class="modal-stock-item${already?' already-added':''}" onclick="${already?'':` addToWatchlist('${s.symbol}')`}"><div><div class="modal-stock-symbol">${s.symbol}</div><div class="modal-stock-name">${s.name}</div></div><span class="modal-stock-sector" style="color:${c?.color||'var(--text3)'}">${c?.label||s.sector}</span></div>`;
