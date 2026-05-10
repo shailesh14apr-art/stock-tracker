@@ -72,6 +72,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .sidebar-footer{padding:12px 8px;border-top:1px solid var(--border);}
 .add-btn{width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
 .add-btn:hover{background:var(--accent2);}
+.signout-btn{width:100%;margin-top:6px;padding:7px;background:none;color:var(--text3);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;}
+.signout-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red-border);}
 .last-updated-bar{padding:6px 12px;font-size:10px;color:var(--text3);text-align:center;border-top:1px solid var(--border);}
 
 /* ── MAIN ─────────────────────────────────────────────────────────────── */
@@ -483,7 +485,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     </div>
   </div>
   <div class="sidebar-body"><div class="sidebar-label">Your Watchlist</div><div id="watchlist-container"></div></div>
-  <div class="sidebar-footer"><button class="add-btn" onclick="openModal()">+ Add Stock</button></div>
+  <div class="sidebar-footer">
+    <button class="add-btn" onclick="openModal()">+ Add Stock</button>
+    <button class="signout-btn" onclick="handleSignOut()" title="Sign out">⎋ Sign Out</button>
+  </div>
   <div class="last-updated-bar" id="last-updated-bar">Last updated: —</div>
 </aside>
 <main id="main">
@@ -1173,7 +1178,12 @@ function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-IN',{day:'
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
-function loTogglePw() {
+function handleSignOut() {
+  localStorage.removeItem('bl_loggedIn');
+  const overlay = document.getElementById('login-overlay');
+  overlay.classList.remove('hidden', 'fade-out');
+  setTimeout(initLoginChart, 60);
+}
   const inp = document.getElementById('lo-password');
   const btn = inp.nextElementSibling;
   if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
