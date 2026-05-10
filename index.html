@@ -50,8 +50,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .stock-card{padding:10px 12px;border-radius:8px;cursor:pointer;border:1px solid transparent;margin-bottom:2px;transition:all .15s;}
 .stock-card:hover{background:var(--surface2);border-color:var(--border2);}
 .stock-card.active{background:var(--card-active-bg);border-color:var(--accent);}
-.stock-card-top{display:flex;justify-content:space-between;align-items:center;}
-.stock-symbol{font-size:13px;font-weight:700;}
+.stock-card-top{display:flex;align-items:center;}
+.stock-symbol{font-size:13px;font-weight:700;flex:1;}
+.signal-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;}
 .signal-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
 .signal-BUY_MORE{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
 .signal-HOLD{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
@@ -62,6 +63,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .stock-price{font-size:13px;font-weight:600;}
 .stock-upside{font-size:10px;color:var(--green);font-weight:600;}
 .stock-name{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
+.remove-btn{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0;margin-left:4px;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;transition:color .15s;}
+.remove-btn:hover{color:var(--red);}
 .sidebar-footer{padding:12px 8px;border-top:1px solid var(--border);}
 .add-btn{width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
 .add-btn:hover{background:var(--accent2);}
@@ -650,7 +653,7 @@ function renderSidebar() {
     const price=d?.price?.current?'₹'+d.price.current.toLocaleString('en-IN'):'—';
     const upside=d?.targets?.average&&d?.price?.current?(((d.targets.average-d.price.current)/d.price.current)*100).toFixed(0)+'% upside':signal==='LOADING'?'Analysing…':'Pending analysis';
     return `<div class="stock-card${activeStock===sym?' active':''}" onclick="selectStock('${sym}')">
-      <div class="stock-card-top"><span class="stock-symbol">${sym}</span><span class="signal-badge signal-${signal}">${signal.replace('_',' ')}</span></div>
+      <div class="stock-card-top"><span class="stock-symbol">${sym}</span><span class="signal-badge signal-${signal}">${signal.replace('_',' ')}</span><button class="remove-btn" onclick="event.stopPropagation(); removeFromWatchlist('${sym}')" title="Remove from watchlist">×</button></div>
       <div class="stock-card-bottom"><span class="stock-price">${price}</span><span class="stock-upside" style="${signal==='PENDING'||signal==='LOADING'?'color:var(--text3)':''}">${upside}</span></div>
       <div class="stock-name">${name}</div></div>`;
   }).join('');
@@ -721,6 +724,7 @@ async function triggerAnalysis(sym) {
   }
 }
 function addToWatchlist(sym) { const wl=getWatchlist(); if(!wl.includes(sym)){wl.push(sym);saveWatchlist(wl);} closeModal(); renderSidebar(); triggerAnalysis(sym); }
+function removeFromWatchlist(sym) { const wl=getWatchlist(); const idx=wl.indexOf(sym); if(idx>-1){wl.splice(idx,1);saveWatchlist(wl); const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s));} if(activeStock===sym){activeStock=null; document.getElementById('main-content').innerHTML='';} renderSidebar(); }
 
 // ── PRICE CHART ────────────────────────────────────────────────────────────────
 function setTimeframe(tf) {
