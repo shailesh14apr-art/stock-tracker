@@ -39,7 +39,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 #sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 .sidebar-header{padding:16px 16px 12px;border-bottom:1px solid var(--border);}
 .sidebar-header-row{display:flex;justify-content:space-between;align-items:flex-start;}
-.sidebar-header h1{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.brand-title{display:flex;align-items:center;gap:10px;}
+.brand-logo{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--accent);}
+.brand-logo svg{width:100%;height:100%;}
+.sidebar-header h1{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px;}
 .sidebar-header p{font-size:11px;color:var(--text3);margin-top:2px;}
 .theme-toggle{background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:13px;line-height:1.4;transition:all .15s;flex-shrink:0;}
 .theme-toggle:hover{background:var(--surface2);color:var(--text);}
@@ -465,7 +468,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <aside id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-header-row">
-      <div><h1>📈 BazaarLens</h1><p>AI-powered weekly analysis</p></div>
+      <div class="brand-title"><div class="brand-logo" aria-hidden="true"><svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" role="img"><circle cx="31" cy="31" r="22" stroke="currentColor" stroke-width="4" fill="none"/><path d="M47 46l18 18" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="22" y="26" width="4" height="22" rx="2" fill="currentColor"/><rect x="30" y="18" width="4" height="30" rx="2" fill="currentColor"/><rect x="38" y="34" width="4" height="14" rx="2" fill="currentColor"/></svg></div><div><h1>BazaarLens</h1><p>AI-powered weekly analysis</p></div></div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="theme-toggle" onclick="showHub()" title="Back to home">🏠</button>
         <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
