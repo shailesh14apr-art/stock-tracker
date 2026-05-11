@@ -746,8 +746,11 @@ function renderPriceChart(record,tf) {
   const mkLine=s=>s.map((y,i)=>y!=null?{x:slice[i].t,y}:null).filter(Boolean);
   const timeUnit=(tf==='W1'||tf==='M1')?'day':tf==='M3'?'week':'month';
   const xDef={type:'timeseries',time:{unit:timeUnit,displayFormats:{day:'d MMM',week:'d MMM',month:'MMM yy'}},ticks:{color:tickCol,font:{size:10},maxTicksLimit:8,source:'auto'},grid:{color:gridCol}};
+  const allPx = slice.flatMap(r => [r.o, r.h, r.l, r.c]).filter(v => v != null && v > 0);
+  const pMin  = Math.min(...allPx) * 0.997;
+  const pMax  = Math.max(...allPx) * 1.003;
   try {
-    priceChart=new Chart(pCtx,{data:{datasets:[
+    priceChart=new Chart(pCtx,{type:'candlestick',data:{datasets:[
       {type:'candlestick',label:record.symbol,data:slice.map(r=>({x:r.t,o:r.o,h:r.h,l:r.l,c:r.c})),color:{up:'#22c55e',down:'#ef4444',unchanged:'#94a3b8'},borderColor:{up:'#16a34a',down:'#dc2626',unchanged:'#64748b'}},
       ...(mkLine(e20).length?[{type:'line',label:'EMA 20',data:mkLine(e20),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,tension:.1}]:[]),
       ...(mkLine(e50).length?[{type:'line',label:'EMA 50',data:mkLine(e50),borderColor:'#8b5cf6',borderWidth:1.5,pointRadius:0,tension:.1}]:[]),
@@ -758,7 +761,7 @@ function renderPriceChart(record,tf) {
           title:ctx=>{const ts=ctx[0]?.raw?.x??ctx[0]?.parsed?.x;return ts?new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}):'';}  ,
           label:ctx=>{if(ctx.dataset.type==='candlestick'){const p=ctx.raw;return[`O ₹${p.o?.toFixed(2)}   H ₹${p.h?.toFixed(2)}`,`L ₹${p.l?.toFixed(2)}   C ₹${p.c?.toFixed(2)}`];}return`${ctx.dataset.label}: ₹${ctx.raw?.y?.toFixed(2)??'—'}`;}
         }}},
-      scales:{x:xDef,y:{position:'right',ticks:{color:tickCol,font:{size:10},callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:gridCol}}}}});
+      scales:{x:xDef,y:{position:'right',ticks:{color:tickCol,font:{size:10},callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:gridCol},suggestedMin:pMin,suggestedMax:pMax}}}});
     const vc=slice.map(r=>r.c>=r.o?'rgba(34,197,94,.55)':'rgba(239,68,68,.55)');
     volChart=new Chart(vCtx,{type:'bar',data:{datasets:[{data:slice.map(r=>({x:r.t,y:r.v})),backgroundColor:vc,borderWidth:0,borderRadius:1,categoryPercentage:.95,barPercentage:.95}]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{
