@@ -505,6 +505,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <!-- Firebase MUST be first — before Chart.js and the main script -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
@@ -523,15 +524,16 @@ const FIREBASE_CONFIG = {
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const _auth           = firebase.auth();
+const _db             = firebase.firestore();
 const _googleProvider = new firebase.auth.GoogleAuthProvider();
 let _appInited        = false;
 let _loginChartInited = false;
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────────
-_auth.onAuthStateChanged(user => {
+_auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById('login-overlay');
   if (user) {
-    // Hide login, populate hub, show hub
+    // Hide login, populate hub, sync watchlist, show hub
     overlay.classList.add('fade-out');
     setTimeout(() => overlay.classList.add('hidden'), 400);
     const firstName = (user.displayName||'').split(' ')[0] || user.email?.split('@')[0] || 'there';
@@ -542,6 +544,7 @@ _auth.onAuthStateChanged(user => {
     const hubAv = document.getElementById('hub-avatar'), hubFb = document.getElementById('hub-fallback');
     if (user.photoURL) { hubAv.src = user.photoURL; hubAv.style.display = 'block'; hubFb.style.display = 'none'; }
     else { hubFb.textContent = firstName[0].toUpperCase(); hubAv.style.display = 'none'; hubFb.style.display = 'flex'; }
+    await loadUserWatchlist(user.uid);
     showHub();
   } else {
     document.getElementById('hub').style.display = 'none';
@@ -722,7 +725,28 @@ async function loadFundamentals() {
 function getStoredData() { try{return JSON.parse(localStorage.getItem('stockData')||'{}');}catch{return{};} }
 function storeAnalysis(sym,d) { const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a)); }
 function getWatchlist() { try{return JSON.parse(localStorage.getItem('watchlist')||'["TITAGARH"]');}catch{return['TITAGARH'];} }
-function saveWatchlist(l) { localStorage.setItem('watchlist',JSON.stringify(l)); }
+function saveWatchlist(l, sync=true) { localStorage.setItem('watchlist',JSON.stringify(l)); if (sync && _auth.currentUser) syncWatchlist(_auth.currentUser.uid, l); }
+function syncWatchlist(uid, l) {
+  if (!uid || !Array.isArray(l)) return;
+  _db.collection('users').doc(uid).set({ watchlist: l }, { merge: true })
+    .catch(err => console.warn('Failed to sync watchlist:', err.message || err));
+}
+async function loadUserWatchlist(uid) {
+  const local = getWatchlist();
+  try {
+    const doc = await _db.collection('users').doc(uid).get();
+    const remote = doc.exists && Array.isArray(doc.data()?.watchlist) ? doc.data().watchlist : null;
+    const merged = remote ? Array.from(new Set([...remote, ...local])) : local;
+    saveWatchlist(merged, false);
+    if (remote && JSON.stringify(merged) !== JSON.stringify(remote)) {
+      await _db.collection('users').doc(uid).set({ watchlist: merged }, { merge: true });
+    }
+    return merged;
+  } catch (err) {
+    console.warn('Failed to load watchlist:', err.message || err);
+    return local;
+  }
+}
 
 // ── SIDEBAR ────────────────────────────────────────────────────────────────────
 function renderSidebar() {
