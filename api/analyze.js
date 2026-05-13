@@ -72,48 +72,73 @@ export default async function handler(req) {
 
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
-    // ── 1b. Fetch fundamentals from Yahoo Finance quoteSummary ────────────
-    // Best-effort — if it fails, analysis continues with whatever fund was passed in
+    // ── 1b. Auto-fetch fundamentals from Yahoo Finance (two-pass) ───────────
+    // Pass 1: v7/quote  — valuation metrics, generally accessible
+    // Pass 2: v10/quoteSummary — profitability/quality metrics, may be rate-limited
+    // Manual fundamentals.json data always wins on overlap
     let yfFund = {};
+
+    // Pass 1: v7/finance/quote (market cap, P/E, P/B, EPS, dividend)
     try {
-      const sumRes = await fetch(
-        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=summaryDetail,financialData,defaultKeyStatistics`,
-        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
+      const q7Res = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(5000) }
       );
-      if (sumRes.ok) {
-        const sumData = await sumRes.json();
-        const sr = sumData?.quoteSummary?.result?.[0];
-        if (sr) {
-          const sd = sr.summaryDetail        || {};
-          const fd = sr.financialData        || {};
-          const ks = sr.defaultKeyStatistics || {};
-          const rv = v => (v && v.raw != null) ? v.raw : null;
-          const pc = v => rv(v) != null ? +(rv(v) * 100).toFixed(2) : null;
+      if (q7Res.ok) {
+        const q7 = (await q7Res.json())?.quoteResponse?.result?.[0] || {};
+        if (q7.symbol) {
           yfFund = {
-            marketCapCr:     rv(sd.marketCap)              != null ? +(rv(sd.marketCap) / 1e7).toFixed(0) : null,
-            pe:              rv(sd.trailingPE)             != null ? +rv(sd.trailingPE).toFixed(2)        : null,
-            forwardPE:       rv(sd.forwardPE)              != null ? +rv(sd.forwardPE).toFixed(2)         : null,
-            dividendYield:   rv(sd.dividendYield),
-            dividendRate:    rv(sd.dividendRate),
-            eps:             rv(ks.trailingEps)            != null ? +rv(ks.trailingEps).toFixed(2)       : null,
-            pbRatio:         rv(ks.priceToBook)            != null ? +rv(ks.priceToBook).toFixed(2)       : null,
-            bookValue:       rv(ks.bookValue)              != null ? +rv(ks.bookValue).toFixed(2)         : null,
-            roe:             pc(fd.returnOnEquity),
-            operatingMargin: pc(fd.operatingMargins),
-            debtToEquity:    rv(fd.debtToEquity)           != null ? +rv(fd.debtToEquity).toFixed(2)      : null,
-            revenueGrowth:   pc(fd.revenueGrowth),
-            earningsGrowth:  pc(fd.earningsGrowth),
-            targetPrice:     rv(fd.targetMeanPrice)        != null ? +rv(fd.targetMeanPrice).toFixed(2)   : null,
-            analystCount:    rv(fd.numberOfAnalystOpinions),
-            recommendation:  fd.recommendationKey || null,
+            marketCapCr:   q7.marketCap                 ? +(q7.marketCap / 1e7).toFixed(0)       : null,
+            pe:            q7.trailingPE                ? +q7.trailingPE.toFixed(2)               : null,
+            forwardPE:     q7.forwardPE                 ? +q7.forwardPE.toFixed(2)                : null,
+            eps:           q7.epsTrailingTwelveMonths   ? +q7.epsTrailingTwelveMonths.toFixed(2)  : null,
+            pbRatio:       q7.priceToBook               ? +q7.priceToBook.toFixed(2)              : null,
+            bookValue:     q7.bookValue                 ? +q7.bookValue.toFixed(2)                : null,
+            dividendYield: q7.dividendYield             || null,
+            dividendRate:  q7.trailingAnnualDividendRate|| null,
           };
-          // Strip null/undefined keys
           Object.keys(yfFund).forEach(k => { if (yfFund[k] == null) delete yfFund[k]; });
         }
       }
-    } catch (_) { /* quoteSummary is best-effort */ }
+    } catch (_) { /* v7/quote best-effort */ }
 
-    // Merge: manually-passed fund (from fundamentals.json) overrides Yahoo Finance where set
+    // Pass 2: v10/quoteSummary (ROE, margins, D/E, growth, analyst targets)
+    try {
+      const qsRes = await fetch(
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`,
+        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(5000) }
+      );
+      if (qsRes.ok) {
+        const sr = (await qsRes.json())?.quoteSummary?.result?.[0];
+        if (sr) {
+          const fd = sr.financialData        || {};
+          const ks = sr.defaultKeyStatistics || {};
+          const sd = sr.summaryDetail        || {};
+          const rv = v => (v && v.raw != null) ? v.raw : null;
+          const pc = v => rv(v) != null ? +(rv(v) * 100).toFixed(2) : null;
+          const qsExtra = {
+            roe:             pc(fd.returnOnEquity),
+            operatingMargin: pc(fd.operatingMargins),
+            debtToEquity:    rv(fd.debtToEquity)     != null ? +rv(fd.debtToEquity).toFixed(2)     : null,
+            revenueGrowth:   pc(fd.revenueGrowth),
+            earningsGrowth:  pc(fd.earningsGrowth),
+            targetPrice:     rv(fd.targetMeanPrice)  != null ? +rv(fd.targetMeanPrice).toFixed(2)  : null,
+            analystCount:    rv(fd.numberOfAnalystOpinions),
+            recommendation:  fd.recommendationKey    || null,
+            // Valuation fallbacks if v7 missed them
+            pe:              rv(sd.trailingPE)       != null ? +rv(sd.trailingPE).toFixed(2)       : null,
+            forwardPE:       rv(sd.forwardPE)        != null ? +rv(sd.forwardPE).toFixed(2)        : null,
+            marketCapCr:     rv(sd.marketCap)        != null ? +(rv(sd.marketCap)/1e7).toFixed(0)  : null,
+            eps:             rv(ks.trailingEps)      != null ? +rv(ks.trailingEps).toFixed(2)      : null,
+            pbRatio:         rv(ks.priceToBook)      != null ? +rv(ks.priceToBook).toFixed(2)      : null,
+          };
+          Object.keys(qsExtra).forEach(k => { if (qsExtra[k] == null) delete qsExtra[k]; });
+          yfFund = { ...yfFund, ...qsExtra }; // quoteSummary fills any gaps left by v7
+        }
+      }
+    } catch (_) { /* quoteSummary best-effort */ }
+
+    // Final merge: manually-passed fund (fundamentals.json) always takes priority
     fund = { ...yfFund, ...fund };
 
     // ── 2. Technical indicators ───────────────────────────────────────────
