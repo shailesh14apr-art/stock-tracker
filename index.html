@@ -39,10 +39,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 #sidebar{width:260px;min-width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 .sidebar-header{padding:16px 16px 12px;border-bottom:1px solid var(--border);}
 .sidebar-header-row{display:flex;justify-content:space-between;align-items:flex-start;}
-.brand-title{display:flex;align-items:center;gap:10px;}
-.brand-logo{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--accent);}
-.brand-logo svg{width:100%;height:100%;}
-.sidebar-header h1{font-size:16px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px;}
+.sidebar-header h1{font-size:16px;font-weight:700;letter-spacing:-.3px;}
 .sidebar-header p{font-size:11px;color:var(--text3);margin-top:2px;}
 .theme-toggle{background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:13px;line-height:1.4;transition:all .15s;flex-shrink:0;}
 .theme-toggle:hover{background:var(--surface2);color:var(--text);}
@@ -309,6 +306,46 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .hub-footer-note{text-align:center;font-size:11px;color:#94a3b8;margin-top:40px;}
 @media(max-width:900px){.hub-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto;}.hub-card-featured{grid-row:1;grid-column:1/3;}.hub-body{padding:24px 20px 40px;}}
 @media(max-width:580px){.hub-grid{grid-template-columns:1fr;}.hub-card-featured{grid-column:1;}.hub-header{padding:12px 16px;}.hub-welcome h1{font-size:22px;}}
+
+/* ── ACCOUNT PAGE ─────────────────────────────────────────────────────── */
+#account{position:fixed;inset:0;z-index:600;background:#f1f5f9;overflow-y:auto;font-family:'Segoe UI',system-ui,sans-serif;display:none;}
+.acct-header{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 32px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;}
+.acct-back{background:none;border:1px solid #e2e8f0;color:#64748b;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.acct-back:hover{background:#f1f5f9;color:#0f172a;}
+.acct-header h2{font-size:17px;font-weight:700;color:#0f172a;}
+.acct-body{max-width:560px;margin:0 auto;padding:32px 24px 60px;}
+.acct-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:28px;margin-bottom:20px;}
+.acct-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8;margin-bottom:20px;}
+.acct-profile{display:flex;align-items:center;gap:20px;}
+.acct-avatar-img{width:64px;height:64px;border-radius:50%;object-fit:cover;display:none;}
+.acct-avatar-fallback{width:64px;height:64px;border-radius:50%;background:#2563eb;color:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.acct-profile-info{}
+.acct-display-name{font-size:20px;font-weight:700;color:#0f172a;}
+.acct-email{font-size:13px;color:#64748b;margin-top:3px;}
+.acct-provider-badge{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac;}
+.acct-provider-badge.email{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+.acct-field{margin-bottom:14px;}
+.acct-field label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;}
+.acct-field input{width:100%;padding:10px 14px;font-size:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;color:#0f172a;outline:none;transition:border-color .15s;font-family:inherit;}
+.acct-field input:focus{border-color:#2563eb;background:#fff;}
+.acct-pw-btn{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s;margin-top:4px;}
+.acct-pw-btn:hover{background:#1d4ed8;transform:translateY(-1px);}
+.acct-pw-msg{font-size:12px;margin-top:10px;padding:8px 12px;border-radius:8px;display:none;}
+.acct-pw-msg.success{display:block;background:#f0fdf4;color:#16a34a;border:1px solid #86efac;}
+.acct-pw-msg.error{display:block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;}
+.acct-signout-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:20px 28px;display:flex;align-items:center;justify-content:space-between;}
+.acct-signout-info{font-size:13px;color:#64748b;}
+.acct-signout-btn{background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.acct-signout-btn:hover{background:#fef2f2;}
+/* Email verification sent state */
+.lo-email-sent{display:none;text-align:center;padding:8px 0;}
+.lo-sent-icon{font-size:44px;margin-bottom:14px;}
+.lo-sent-title{font-size:18px;font-weight:700;color:#0f172a;margin-bottom:8px;}
+.lo-sent-sub{font-size:13px;color:#64748b;line-height:1.5;margin-bottom:6px;}
+.lo-sent-email{font-size:13px;font-weight:600;color:#2563eb;margin-bottom:16px;}
+.lo-sent-note{font-size:11px;color:#94a3b8;margin-bottom:18px;}
+.lo-sent-back{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+.lo-resend{background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;margin-top:8px;font-family:inherit;text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -339,6 +376,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="lo-card">
       <div class="lo-card-icon">📈</div>
       <div class="lo-card-head"><h2>Welcome back</h2><p>Sign in to your watchlist</p></div>
+      <!-- Email verification sent state -->
+      <div class="lo-email-sent" id="lo-email-sent">
+        <div class="lo-sent-icon">📧</div>
+        <div class="lo-sent-title">Check your inbox</div>
+        <div class="lo-sent-sub">We sent a verification link to:</div>
+        <div class="lo-sent-email" id="lo-sent-addr"></div>
+        <div class="lo-sent-note">Click the link in the email, then come back and sign in.<br>Check your spam folder if you don't see it.</div>
+        <button class="lo-sent-back" onclick="loBackToLogin()">Back to Sign In</button>
+        <button class="lo-resend" id="lo-resend-btn" onclick="loResendVerification()">Resend verification email</button>
+      </div>
+      <!-- Main form -->
+      <div id="lo-form-area">
       <div class="lo-field" id="lo-field-email">
         <label for="lo-email">Email</label>
         <div class="lo-field-wrap"><input type="email" id="lo-email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')handleLoginEmail()"/></div>
@@ -367,6 +416,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </button>
       <div class="lo-auth-error" id="lo-auth-error"></div>
       <div class="lo-signup-row">Don't have an account?<a href="#" onclick="loSwitchToSignup(event)">Get started →</a></div>
+      </div><!-- end lo-form-area -->
     </div>
   </div>
 </div>
@@ -379,9 +429,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <span class="hub-brand-badge">Beta</span>
     </div>
     <div class="hub-header-right">
-      <img class="hub-avatar-img" id="hub-avatar" src="" alt="">
-      <div class="hub-avatar-fallback" id="hub-fallback">U</div>
-      <span class="hub-user-name" id="hub-user-name"></span>
+      <div onclick="showAccount('hub')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" title="Account settings">
+        <img class="hub-avatar-img" id="hub-avatar" src="" alt="">
+        <div class="hub-avatar-fallback" id="hub-fallback">U</div>
+        <span class="hub-user-name" id="hub-user-name"></span>
+      </div>
       <button class="hub-signout" onclick="handleSignOut()">Sign out</button>
     </div>
   </div>
@@ -464,13 +516,64 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   </div>
 </div>
 
+<!-- ── ACCOUNT PAGE ──────────────────────────────────────────────────────── -->
+<div id="account">
+  <div class="acct-header">
+    <button class="acct-back" onclick="hideAccount()">← Back</button>
+    <h2>Account Settings</h2>
+  </div>
+  <div class="acct-body">
+
+    <!-- Profile -->
+    <div class="acct-card">
+      <div class="acct-card-title">Profile</div>
+      <div class="acct-profile">
+        <img class="acct-avatar-img" id="acct-avatar-img" src="" alt="">
+        <div class="acct-avatar-fallback" id="acct-avatar-fallback">U</div>
+        <div class="acct-profile-info">
+          <div class="acct-display-name" id="acct-display-name">—</div>
+          <div class="acct-email" id="acct-email">—</div>
+          <div class="acct-provider-badge" id="acct-provider-badge">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password (email/password users only) -->
+    <div class="acct-card" id="acct-pw-card" style="display:none;">
+      <div class="acct-card-title">Change Password</div>
+      <div class="acct-field">
+        <label>Current password</label>
+        <input type="password" id="acct-current-pw" placeholder="Enter current password" autocomplete="current-password"/>
+      </div>
+      <div class="acct-field">
+        <label>New password</label>
+        <input type="password" id="acct-new-pw" placeholder="At least 6 characters" autocomplete="new-password"/>
+      </div>
+      <div class="acct-field">
+        <label>Confirm new password</label>
+        <input type="password" id="acct-confirm-pw" placeholder="Repeat new password" autocomplete="new-password"/>
+      </div>
+      <button class="acct-pw-btn" onclick="changePassword()">Update Password</button>
+      <div class="acct-pw-msg" id="acct-pw-msg"></div>
+    </div>
+
+    <!-- Sign out -->
+    <div class="acct-signout-card">
+      <div class="acct-signout-info">Signed in as <strong id="acct-so-email">—</strong></div>
+      <button class="acct-signout-btn" onclick="handleSignOut()">Sign Out</button>
+    </div>
+
+  </div>
+</div>
+
 <!-- ── APP SHELL ─────────────────────────────────────────────────────────── -->
 <aside id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-header-row">
-      <div class="brand-title"><div class="brand-logo" aria-hidden="true"><svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" role="img"><circle cx="31" cy="31" r="22" stroke="currentColor" stroke-width="4" fill="none"/><path d="M47 46l18 18" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><rect x="22" y="26" width="4" height="22" rx="2" fill="currentColor"/><rect x="30" y="18" width="4" height="30" rx="2" fill="currentColor"/><rect x="38" y="34" width="4" height="14" rx="2" fill="currentColor"/></svg></div><div><h1>BazaarLens</h1><p>AI-powered weekly analysis</p></div></div>
+      <div><h1>📈 BazaarLens</h1><p>AI-powered weekly analysis</p></div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="theme-toggle" onclick="showHub()" title="Back to home">🏠</button>
+        <button class="theme-toggle" onclick="showAccount('app')" title="Account settings">👤</button>
         <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
       </div>
     </div>
@@ -505,7 +608,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <!-- Firebase MUST be first — before Chart.js and the main script -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
@@ -524,16 +626,34 @@ const FIREBASE_CONFIG = {
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const _auth           = firebase.auth();
-const _db             = firebase.firestore();
 const _googleProvider = new firebase.auth.GoogleAuthProvider();
-let _appInited        = false;
-let _loginChartInited = false;
+let _appInited           = false;
+let _loginChartInited    = false;
+let _pendingVerification = false; // true while we're sending a verification email
+let _prevPage            = 'hub'; // track where to return from account page
+let _pendingVerifEmail   = '';    // email used for last verification send
+
+// Handle redirect sign-in result (fallback for browsers that blocked popup)
+_auth.getRedirectResult()
+  .then(result => { /* onAuthStateChanged handles the rest */ })
+  .catch(err => { if (err.code && err.code !== 'auth/no-auth-event') console.error('Redirect error:', err.code); });
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────────
-_auth.onAuthStateChanged(async user => {
+_auth.onAuthStateChanged(user => {
   const overlay = document.getElementById('login-overlay');
   if (user) {
-    // Hide login, populate hub, sync watchlist, show hub
+    // Email/password users must verify their email first
+    const isPasswordUser = user.providerData.some(p => p.providerId === 'password');
+    if (isPasswordUser && !user.emailVerified) {
+      if (!_pendingVerification) {
+        // Somehow signed in without verifying — block and sign out
+        _auth.signOut();
+      }
+      // _pendingVerification=true means we're in the middle of handleLoginEmail
+      // which will sign out and show the email-sent screen itself
+      return;
+    }
+    // Signed in and verified (or Google/other provider)
     overlay.classList.add('fade-out');
     setTimeout(() => overlay.classList.add('hidden'), 400);
     const firstName = (user.displayName||'').split(' ')[0] || user.email?.split('@')[0] || 'there';
@@ -544,10 +664,11 @@ _auth.onAuthStateChanged(async user => {
     const hubAv = document.getElementById('hub-avatar'), hubFb = document.getElementById('hub-fallback');
     if (user.photoURL) { hubAv.src = user.photoURL; hubAv.style.display = 'block'; hubFb.style.display = 'none'; }
     else { hubFb.textContent = firstName[0].toUpperCase(); hubAv.style.display = 'none'; hubFb.style.display = 'flex'; }
-    await loadUserWatchlist(user.uid);
     showHub();
   } else {
+    // Signed out — hide everything, show login
     document.getElementById('hub').style.display = 'none';
+    document.getElementById('account').style.display = 'none';
     overlay.classList.remove('hidden', 'fade-out');
     if (!_loginChartInited) { _loginChartInited = true; setTimeout(initLoginChart, 60); }
   }
@@ -603,23 +724,91 @@ function handleLoginEmail() {
   const btn=document.getElementById('lo-signin-btn');
   btn.classList.add('loading');
   document.getElementById('lo-signin-label').textContent = 'Signing in…';
+
   _auth.signInWithEmailAndPassword(email, pw)
-    .catch(err => {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential')
-        return _auth.createUserWithEmailAndPassword(email, pw);
-      throw err;
+    .then(cred => {
+      if (!cred.user.emailVerified) {
+        // Account exists but email never verified — resend and block
+        cred.user.sendEmailVerification().catch(()=>{});
+        return _auth.signOut().then(() => {
+          loResetEmailBtn();
+          loShowEmailSent(email, true);
+        });
+      }
+      // Verified — onAuthStateChanged handles navigation
     })
     .catch(err => {
-      loResetEmailBtn();
-      const msgs = {
-        'auth/wrong-password':'Incorrect password. Please try again.',
-        'auth/invalid-email':'Invalid email address.',
-        'auth/too-many-requests':'Too many attempts. Please try again later.',
-        'auth/weak-password':'Password must be at least 6 characters.',
-        'auth/email-already-in-use':'Account already exists. Try signing in.',
-      };
-      loShowError(msgs[err.code] || err.message);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' && false) {
+        // user-not-found → create new account with email verification
+        _auth.createUserWithEmailAndPassword(email, pw)
+          .then(cred => {
+            _pendingVerification = true;
+            _pendingVerifEmail = email;
+            return cred.user.sendEmailVerification()
+              .then(() => _auth.signOut())
+              .then(() => {
+                _pendingVerification = false;
+                loResetEmailBtn();
+                loShowEmailSent(email, false);
+              });
+          })
+          .catch(createErr => {
+            _pendingVerification = false;
+            loResetEmailBtn();
+            const msgs = {
+              'auth/weak-password':'Password must be at least 6 characters.',
+              'auth/email-already-in-use':'Account already exists — try signing in.',
+            };
+            loShowError(msgs[createErr.code] || createErr.message);
+          });
+      } else {
+        loResetEmailBtn();
+        const msgs = {
+          'auth/wrong-password':'Incorrect password. Please try again.',
+          'auth/invalid-email':'Invalid email address.',
+          'auth/too-many-requests':'Too many attempts. Please try again later.',
+        };
+        loShowError(msgs[err.code] || err.message);
+      }
     });
+}
+
+// Email sent state helpers
+function loShowEmailSent(email, resent) {
+  _pendingVerifEmail = email;
+  document.getElementById('lo-form-area').style.display = 'none';
+  document.getElementById('lo-email-sent').style.display = 'block';
+  document.getElementById('lo-sent-addr').textContent = email;
+  if (resent) {
+    document.getElementById('lo-resend-btn').textContent = 'Verification email resent ✓';
+    document.getElementById('lo-resend-btn').disabled = true;
+    setTimeout(() => {
+      const b = document.getElementById('lo-resend-btn');
+      if (b) { b.textContent = 'Resend verification email'; b.disabled = false; }
+    }, 5000);
+  }
+}
+function loBackToLogin() {
+  document.getElementById('lo-email-sent').style.display = 'none';
+  document.getElementById('lo-form-area').style.display = 'block';
+  loClearError();
+}
+function loResendVerification() {
+  if (!_pendingVerifEmail) return;
+  const btn = document.getElementById('lo-resend-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  // Sign in temporarily to get user object, then send verification
+  const pw = document.getElementById('lo-password').value;
+  if (!pw) { btn.textContent = 'Enter your password above first'; return; }
+  _auth.signInWithEmailAndPassword(_pendingVerifEmail, pw)
+    .then(cred => {
+      _pendingVerification = true;
+      return cred.user.sendEmailVerification()
+        .then(() => _auth.signOut())
+        .then(() => { _pendingVerification = false; btn.textContent = 'Resent ✓'; setTimeout(() => { btn.textContent = 'Resend verification email'; btn.disabled = false; }, 4000); });
+    })
+    .catch(() => { btn.textContent = 'Failed — try again'; btn.disabled = false; });
 }
 
 const GOOGLE_BTN_INNER = `<svg class="lo-google-icon" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google`;
@@ -629,10 +818,26 @@ function handleLoginGoogle() {
   const btn=document.getElementById('lo-google-btn');
   btn.classList.add('loading');
   btn.innerHTML = '<span style="font-size:13px;color:#334155">Signing in with Google…</span>';
+
+  // Mobile browsers handle redirects more reliably than popups
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    _auth.signInWithRedirect(_googleProvider);
+    return;
+  }
+
   _auth.signInWithPopup(_googleProvider).catch(err => {
     btn.classList.remove('loading');
     btn.innerHTML = GOOGLE_BTN_INNER;
-    if (err.code !== 'auth/popup-closed-by-user') loShowError('Google sign-in failed. Please try again.');
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+      // Browser blocked the popup — fall back to redirect
+      loShowError('Popup blocked — redirecting to Google…');
+      setTimeout(() => _auth.signInWithRedirect(_googleProvider), 900);
+    } else if (err.code === 'auth/popup-closed-by-user') {
+      // User dismissed — do nothing
+    } else {
+      loShowError('Google sign-in failed (' + err.code + '). Please try again.');
+    }
   });
 }
 
@@ -654,7 +859,84 @@ function loSwitchToSignin(e) {
 function handleSignOut() {
   _appInited = false;
   document.getElementById('hub').style.display = 'none';
+  document.getElementById('account').style.display = 'none';
   _auth.signOut();
+}
+
+// ── ACCOUNT PAGE ──────────────────────────────────────────────────────────────
+function showAccount(from) {
+  _prevPage = from || 'hub';
+  populateAccountPage();
+  document.getElementById('account').style.display = 'block';
+}
+
+function hideAccount() {
+  document.getElementById('account').style.display = 'none';
+  // Clear password fields on close
+  ['acct-current-pw','acct-new-pw','acct-confirm-pw'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const msg = document.getElementById('acct-pw-msg');
+  if (msg) { msg.textContent=''; msg.className='acct-pw-msg'; }
+  // Return to previous context
+  if (_prevPage === 'app') { /* app already visible */ }
+  else { showHub(); }
+}
+
+function populateAccountPage() {
+  const user = _auth.currentUser;
+  if (!user) return;
+  const name = user.displayName || user.email.split('@')[0] || 'User';
+  // Avatar
+  const img = document.getElementById('acct-avatar-img'), fb = document.getElementById('acct-avatar-fallback');
+  if (user.photoURL) { img.src = user.photoURL; img.style.display = 'block'; fb.style.display = 'none'; }
+  else { fb.textContent = name[0].toUpperCase(); img.style.display = 'none'; fb.style.display = 'flex'; }
+  // Info
+  document.getElementById('acct-display-name').textContent = user.displayName || name;
+  document.getElementById('acct-email').textContent = user.email || '';
+  document.getElementById('acct-so-email').textContent = user.email || '';
+  // Provider
+  const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
+  const isPassword = user.providerData.some(p => p.providerId === 'password');
+  const badge = document.getElementById('acct-provider-badge');
+  if (isGoogle) { badge.textContent = '🔗 Signed in with Google'; badge.className = 'acct-provider-badge'; }
+  else { badge.textContent = '📧 Email & password'; badge.className = 'acct-provider-badge email'; }
+  // Show password change only for email/password users
+  document.getElementById('acct-pw-card').style.display = isPassword ? 'block' : 'none';
+}
+
+function changePassword() {
+  const currentPw = document.getElementById('acct-current-pw').value;
+  const newPw     = document.getElementById('acct-new-pw').value;
+  const confirmPw = document.getElementById('acct-confirm-pw').value;
+  const msg       = document.getElementById('acct-pw-msg');
+  const btn       = document.querySelector('.acct-pw-btn');
+  msg.textContent = ''; msg.className = 'acct-pw-msg';
+  if (!currentPw) { msg.textContent = 'Please enter your current password.'; msg.className = 'acct-pw-msg error'; return; }
+  if (newPw.length < 6) { msg.textContent = 'New password must be at least 6 characters.'; msg.className = 'acct-pw-msg error'; return; }
+  if (newPw !== confirmPw) { msg.textContent = 'Passwords do not match.'; msg.className = 'acct-pw-msg error'; return; }
+  btn.textContent = 'Updating…'; btn.disabled = true;
+  const user = _auth.currentUser;
+  const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPw);
+  user.reauthenticateWithCredential(credential)
+    .then(() => user.updatePassword(newPw))
+    .then(() => {
+      msg.textContent = '✓ Password updated successfully.'; msg.className = 'acct-pw-msg success';
+      document.getElementById('acct-current-pw').value = '';
+      document.getElementById('acct-new-pw').value = '';
+      document.getElementById('acct-confirm-pw').value = '';
+      btn.textContent = 'Update Password'; btn.disabled = false;
+    })
+    .catch(err => {
+      const errs = {
+        'auth/wrong-password':'Current password is incorrect.',
+        'auth/weak-password':'New password must be at least 6 characters.',
+        'auth/too-many-requests':'Too many attempts. Please try again later.',
+        'auth/requires-recent-login':'Please sign out and sign in again before changing your password.',
+      };
+      msg.textContent = errs[err.code] || err.message; msg.className = 'acct-pw-msg error';
+      btn.textContent = 'Update Password'; btn.disabled = false;
+    });
 }
 
 // ── APP CONSTANTS ──────────────────────────────────────────────────────────────
@@ -725,28 +1007,7 @@ async function loadFundamentals() {
 function getStoredData() { try{return JSON.parse(localStorage.getItem('stockData')||'{}');}catch{return{};} }
 function storeAnalysis(sym,d) { const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a)); }
 function getWatchlist() { try{return JSON.parse(localStorage.getItem('watchlist')||'["TITAGARH"]');}catch{return['TITAGARH'];} }
-function saveWatchlist(l, sync=true) { localStorage.setItem('watchlist',JSON.stringify(l)); if (sync && _auth.currentUser) syncWatchlist(_auth.currentUser.uid, l); }
-function syncWatchlist(uid, l) {
-  if (!uid || !Array.isArray(l)) return;
-  _db.collection('users').doc(uid).set({ watchlist: l }, { merge: true })
-    .catch(err => console.warn('Failed to sync watchlist:', err.message || err));
-}
-async function loadUserWatchlist(uid) {
-  const local = getWatchlist();
-  try {
-    const doc = await _db.collection('users').doc(uid).get();
-    const remote = doc.exists && Array.isArray(doc.data()?.watchlist) ? doc.data().watchlist : null;
-    const merged = remote ? Array.from(new Set([...remote, ...local])) : local;
-    saveWatchlist(merged, false);
-    if (remote && JSON.stringify(merged) !== JSON.stringify(remote)) {
-      await _db.collection('users').doc(uid).set({ watchlist: merged }, { merge: true });
-    }
-    return merged;
-  } catch (err) {
-    console.warn('Failed to load watchlist:', err.message || err);
-    return local;
-  }
-}
+function saveWatchlist(l) { localStorage.setItem('watchlist',JSON.stringify(l)); }
 
 // ── SIDEBAR ────────────────────────────────────────────────────────────────────
 function renderSidebar() {
