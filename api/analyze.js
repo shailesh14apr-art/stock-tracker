@@ -72,6 +72,50 @@ export default async function handler(req) {
 
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
+    // ── 1b. Fetch fundamentals from Yahoo Finance quoteSummary ────────────
+    // Best-effort — if it fails, analysis continues with whatever fund was passed in
+    let yfFund = {};
+    try {
+      const sumRes = await fetch(
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=summaryDetail,financialData,defaultKeyStatistics`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
+      );
+      if (sumRes.ok) {
+        const sumData = await sumRes.json();
+        const sr = sumData?.quoteSummary?.result?.[0];
+        if (sr) {
+          const sd = sr.summaryDetail        || {};
+          const fd = sr.financialData        || {};
+          const ks = sr.defaultKeyStatistics || {};
+          const rv = v => (v && v.raw != null) ? v.raw : null;
+          const pc = v => rv(v) != null ? +(rv(v) * 100).toFixed(2) : null;
+          yfFund = {
+            marketCapCr:     rv(sd.marketCap)              != null ? +(rv(sd.marketCap) / 1e7).toFixed(0) : null,
+            pe:              rv(sd.trailingPE)             != null ? +rv(sd.trailingPE).toFixed(2)        : null,
+            forwardPE:       rv(sd.forwardPE)              != null ? +rv(sd.forwardPE).toFixed(2)         : null,
+            dividendYield:   rv(sd.dividendYield),
+            dividendRate:    rv(sd.dividendRate),
+            eps:             rv(ks.trailingEps)            != null ? +rv(ks.trailingEps).toFixed(2)       : null,
+            pbRatio:         rv(ks.priceToBook)            != null ? +rv(ks.priceToBook).toFixed(2)       : null,
+            bookValue:       rv(ks.bookValue)              != null ? +rv(ks.bookValue).toFixed(2)         : null,
+            roe:             pc(fd.returnOnEquity),
+            operatingMargin: pc(fd.operatingMargins),
+            debtToEquity:    rv(fd.debtToEquity)           != null ? +rv(fd.debtToEquity).toFixed(2)      : null,
+            revenueGrowth:   pc(fd.revenueGrowth),
+            earningsGrowth:  pc(fd.earningsGrowth),
+            targetPrice:     rv(fd.targetMeanPrice)        != null ? +rv(fd.targetMeanPrice).toFixed(2)   : null,
+            analystCount:    rv(fd.numberOfAnalystOpinions),
+            recommendation:  fd.recommendationKey || null,
+          };
+          // Strip null/undefined keys
+          Object.keys(yfFund).forEach(k => { if (yfFund[k] == null) delete yfFund[k]; });
+        }
+      }
+    } catch (_) { /* quoteSummary is best-effort */ }
+
+    // Merge: manually-passed fund (from fundamentals.json) overrides Yahoo Finance where set
+    fund = { ...yfFund, ...fund };
+
     // ── 2. Technical indicators ───────────────────────────────────────────
     const price      = closes.at(-1);
     const changePct  = ((price - closes.at(-2)) / closes.at(-2)) * 100;
@@ -185,6 +229,7 @@ Reply ONLY with valid JSON, no markdown:
         volRatio: +volRatio.toFixed(2), techScore: techScoreNorm, scores,
       },
       analysis,
+      fundamentals: fund,   // merged Yahoo Finance + manual data
       ohlcv: rows,
       ema20Series,
       ema50Series,

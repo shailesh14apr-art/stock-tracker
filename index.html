@@ -1104,7 +1104,7 @@ async function triggerAnalysis(sym) {
       symbol:sym, name, sector, signal:analysis.signal||'HOLD', signalReason:analysis.summary||'',
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
-      aiAnalysis:analysis, aiIndicators:ind, fundamentals:{...fundDB[sym]||{}},
+      aiAnalysis:analysis, aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
       targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
       analysts:{buy:0,hold:0,sell:0},
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
