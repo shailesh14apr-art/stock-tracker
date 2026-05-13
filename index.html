@@ -666,10 +666,11 @@ _auth.onAuthStateChanged(user => {
     else { hubFb.textContent = firstName[0].toUpperCase(); hubAv.style.display = 'none'; hubFb.style.display = 'flex'; }
     showHub();
   } else {
-    // Signed out — hide everything, show login
+    // Signed out — hide everything, show login and fully reset form state
     document.getElementById('hub').style.display = 'none';
     document.getElementById('account').style.display = 'none';
     overlay.classList.remove('hidden', 'fade-out');
+    loResetLoginForm();
     if (!_loginChartInited) { _loginChartInited = true; setTimeout(initLoginChart, 60); }
   }
 });
@@ -715,6 +716,30 @@ function loResetEmailBtn() {
   const btn=document.getElementById('lo-signin-btn');
   btn.classList.remove('loading');
   document.getElementById('lo-signin-label').textContent = 'Sign In';
+}
+
+function loResetLoginForm() {
+  // Reset sign-in button
+  loResetEmailBtn();
+  // Reset Google button
+  const gBtn = document.getElementById('lo-google-btn');
+  if (gBtn) { gBtn.classList.remove('loading'); gBtn.innerHTML = GOOGLE_BTN_INNER; }
+  // Clear errors
+  loClearError();
+  // Hide email-sent screen, show form
+  const formArea = document.getElementById('lo-form-area');
+  const emailSent = document.getElementById('lo-email-sent');
+  if (formArea) formArea.style.display = 'block';
+  if (emailSent) emailSent.style.display = 'none';
+  // Reset card heading back to sign-in
+  const h2 = document.querySelector('.lo-card-head h2');
+  const p  = document.querySelector('.lo-card-head p');
+  const row = document.querySelector('.lo-signup-row');
+  if (h2) h2.textContent = 'Welcome back';
+  if (p)  p.textContent  = 'Sign in to your watchlist';
+  const label = document.getElementById('lo-signin-label');
+  if (label) label.textContent = 'Sign In';
+  if (row) row.innerHTML = 'Don\'t have an account?<a href="#" onclick="loSwitchToSignup(event)"> Get started →</a>';
 }
 
 function handleLoginEmail() {
