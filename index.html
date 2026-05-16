@@ -902,11 +902,17 @@ function handleLoginGoogle() {
   btn.classList.add('loading');
   btn.innerHTML = '<span style="font-size:13px;color:#334155">Opening Google sign-in…</span>';
 
+  console.log('Initiating Google sign-in with provider:', _googleProvider);
   _auth.signInWithPopup(_googleProvider)
-    .then(() => { /* onAuthStateChanged handles navigation */ })
+    .then(() => { 
+      console.log('Google sign-in successful');
+      /* onAuthStateChanged handles navigation */ 
+    })
     .catch(err => {
       btn.classList.remove('loading');
       btn.innerHTML = GOOGLE_BTN_INNER;
+
+      console.error('Google sign-in error code:', err.code, 'message:', err.message);
 
       switch (err.code) {
         case 'auth/popup-closed-by-user':
@@ -916,7 +922,7 @@ function handleLoginGoogle() {
 
         case 'auth/popup-blocked':
           // Popup blocked by browser — offer redirect as alternative
-          loShowError('Popup was blocked by your browser.');
+          loShowError('Popup was blocked by your browser. Try the redirect option below.');
           document.getElementById('lo-redirect-wrap').style.display = 'block';
           break;
 
@@ -929,7 +935,10 @@ function handleLoginGoogle() {
           break;
 
         case 'auth/operation-not-allowed':
-          loShowError('Google sign-in is not enabled. Enable it in Firebase → Authentication → Sign-in method.');
+          loShowError('Google sign-in is not enabled in Firebase.');
+          const hint2 = document.getElementById('lo-domain-hint');
+          hint2.textContent = 'Fix: Firebase Console → Authentication → Sign-in method → Enable Google';
+          hint2.style.display = 'block';
           break;
 
         case 'auth/network-request-failed':
@@ -937,8 +946,8 @@ function handleLoginGoogle() {
           break;
 
         default:
-          loShowError('Google sign-in failed (' + err.code + '). Please try again.');
-          console.error('Google sign-in error:', err);
+          loShowError('Google sign-in failed (' + err.code + '): ' + err.message);
+          console.error('Full Google sign-in error:', err);
       }
     });
 }
