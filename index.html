@@ -644,11 +644,13 @@ const FIREBASE_CONFIG = {
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const _auth           = firebase.auth();
+const _db             = firebase.database();
 const _googleProvider = new firebase.auth.GoogleAuthProvider();
 // Ensure the Google sign-in always shows an account chooser so the user
 // can pick which email to use when multiple accounts are signed in.
 _googleProvider.setCustomParameters({ prompt: 'select_account' });
 let _appInited           = false;
+let _currentUser         = null;
 let _loginChartInited    = false;
 let _pendingVerification = false; // true while we're sending a verification email
 let _prevPage            = 'hub'; // track where to return from account page
@@ -682,6 +684,7 @@ _auth.getRedirectResult()
 _auth.onAuthStateChanged(user => {
   const overlay = document.getElementById('login-overlay');
   if (user) {
+    _currentUser = user;
     // Email/password users must verify their email first
     const isPasswordUser = user.providerData.some(p => p.providerId === 'password');
     if (isPasswordUser && !user.emailVerified) {
@@ -694,18 +697,27 @@ _auth.onAuthStateChanged(user => {
       return;
     }
     // Signed in and verified (or Google/other provider)
-    overlay.classList.add('fade-out');
-    setTimeout(() => overlay.classList.add('hidden'), 400);
-    const firstName = (user.displayName||'').split(' ')[0] || user.email?.split('@')[0] || 'there';
-    document.getElementById('hub-name').textContent = firstName;
-    document.getElementById('hub-user-name').textContent = user.displayName || user.email || '';
-    const h = new Date().getHours();
-    document.getElementById('hub-time-greet').textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-    const hubAv = document.getElementById('hub-avatar'), hubFb = document.getElementById('hub-fallback');
-    if (user.photoURL) { hubAv.src = user.photoURL; hubAv.style.display = 'block'; hubFb.style.display = 'none'; }
-    else { hubFb.textContent = firstName[0].toUpperCase(); hubAv.style.display = 'none'; hubFb.style.display = 'flex'; }
-    showHub();
+    // Load watchlist from Firebase for this user
+    syncWatchlistFromFirebase().then(() => {
+      overlay.classList.add('fade-out');
+      setTimeout(() => overlay.classList.add('hidden'), 400);
+      const firstName = (user.displayName||'').split(' ')[0] || user.email?.split('@')[0] || 'there';
+      document.getElementById('hub-name').textContent = firstName;
+      document.getElementById('hub-user-name').textContent = user.displayName || user.email || '';
+      const h = new Date().getHours();
+      document.getElementById('hub-time-greet').textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+      const hubAv = document.getElementById('hub-avatar'), hubFb = document.getElementById('hub-fallback');
+      if (user.photoURL) { hubAv.src = user.photoURL; hubAv.style.display = 'block'; hubFb.style.display = 'none'; }
+      else { hubFb.textContent = firstName[0].toUpperCase(); hubAv.style.display = 'none'; hubFb.style.display = 'flex'; }
+      showHub();
+    }).catch(err => {
+      console.error('Failed to sync watchlist:', err);
+      overlay.classList.add('fade-out');
+      setTimeout(() => overlay.classList.add('hidden'), 400);
+      showHub();
+    });
   } else {
+    _currentUser = null;
     // Signed out — hide everything, show login and fully reset form state
     document.getElementById('hub').style.display = 'none';
     document.getElementById('account').style.display = 'none';
@@ -960,6 +972,7 @@ function loSwitchToSignin(e) {
 
 function handleSignOut() {
   _appInited = false;
+  _currentUser = null;
   document.getElementById('hub').style.display = 'none';
   document.getElementById('account').style.display = 'none';
   _auth.signOut();
@@ -1088,7 +1101,37 @@ async function loadFundamentals() {
 function getStoredData() { try{return JSON.parse(localStorage.getItem('stockData')||'{}');}catch{return{};} }
 function storeAnalysis(sym,d) { const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a)); }
 function getWatchlist() { try{return JSON.parse(localStorage.getItem('watchlist')||'["TITAGARH"]');}catch{return['TITAGARH'];} }
-function saveWatchlist(l) { localStorage.setItem('watchlist',JSON.stringify(l)); }
+
+async function saveWatchlist(l) {
+  // Save to localStorage (immediate, local)
+  localStorage.setItem('watchlist',JSON.stringify(l));
+  // Also sync to Firebase if user is authenticated
+  if (_currentUser) {
+    try {
+      await _db.ref(`watchlists/${_currentUser.uid}`).set(l);
+    } catch (err) {
+      console.warn('Could not sync watchlist to Firebase:', err);
+    }
+  }
+}
+
+async function syncWatchlistFromFirebase() {
+  if (!_currentUser) return;
+  try {
+    const snapshot = await _db.ref(`watchlists/${_currentUser.uid}`).once('value');
+    const firebaseWatchlist = snapshot.val();
+    if (firebaseWatchlist && Array.isArray(firebaseWatchlist)) {
+      // Use Firebase watchlist if it exists
+      localStorage.setItem('watchlist', JSON.stringify(firebaseWatchlist));
+    } else {
+      // First-time user: save current local watchlist to Firebase
+      const localWatchlist = getWatchlist();
+      await _db.ref(`watchlists/${_currentUser.uid}`).set(localWatchlist);
+    }
+  } catch (err) {
+    console.warn('Could not sync watchlist from Firebase:', err);
+  }
+}
 
 // ── SIDEBAR ────────────────────────────────────────────────────────────────────
 function renderSidebar() {
@@ -1203,7 +1246,14 @@ async function triggerAnalysis(sym) {
     const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
   }
 }
-function addToWatchlist(sym) { const wl=getWatchlist(); if(!wl.includes(sym)){wl.push(sym);saveWatchlist(wl);} closeModal(); renderSidebar(); triggerAnalysis(sym); }
+function addToWatchlist(sym) {
+  const wl=getWatchlist();
+  if(!wl.includes(sym)){
+    wl.push(sym);
+    saveWatchlist(wl);
+  }
+  closeModal(); renderSidebar(); triggerAnalysis(sym);
+}
 function removeFromWatchlist(sym) {
   const wl=getWatchlist(), idx=wl.indexOf(sym);
   if(idx>-1){wl.splice(idx,1);saveWatchlist(wl);const s=getStoredData();delete s[sym];localStorage.setItem('stockData',JSON.stringify(s));}
