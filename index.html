@@ -717,15 +717,14 @@ function showHub() {
   document.getElementById('hub').style.display = 'block';
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('hub').style.display = 'none';
   if (!_appInited) {
     _appInited = true;
-    loadFundamentals().then(() => {
-      renderSidebar();
-      const wl = getWatchlist();
-      if (wl.length > 0) selectStock(wl[0]);
-    });
+    await Promise.all([loadFundamentals(), loadKnownStocks()]);
+    renderSidebar();
+    const wl = getWatchlist();
+    if (wl.length > 0) selectStock(wl[0]);
   }
 }
 
@@ -1053,47 +1052,26 @@ const INDUSTRY_CONFIG = {
   metals:         { label:'Metals & Mining',           color:'#94a3b8' },
   energy:         { label:'Energy / Oil & Gas',        color:'#eab308' },
 };
-const KNOWN_STOCKS = [
-  {symbol:'TITAGARH',   name:'Titagarh Rail Systems Ltd',    sector:'railways'},
-  {symbol:'TEXRAIL',    name:'Texmaco Rail & Engineering',   sector:'railways'},
-  {symbol:'JUPITERWAG', name:'Jupiter Wagons Ltd',           sector:'railways'},
-  {symbol:'BEML',       name:'BEML Ltd',                     sector:'railways'},
-  {symbol:'HDFCBANK',   name:'HDFC Bank Ltd',                sector:'banking'},
-  {symbol:'ICICIBANK',  name:'ICICI Bank Ltd',               sector:'banking'},
-  {symbol:'KOTAKBANK',  name:'Kotak Mahindra Bank',          sector:'banking'},
-  {symbol:'SBIN',       name:'State Bank of India',          sector:'banking'},
-  {symbol:'AXISBANK',   name:'Axis Bank Ltd',                sector:'banking'},
-  {symbol:'TCS',        name:'Tata Consultancy Services',    sector:'it'},
-  {symbol:'INFY',       name:'Infosys Ltd',                  sector:'it'},
-  {symbol:'WIPRO',      name:'Wipro Ltd',                    sector:'it'},
-  {symbol:'HCLTECH',    name:'HCL Technologies Ltd',         sector:'it'},
-  {symbol:'LTIM',       name:'LTIMindtree Ltd',              sector:'it'},
-  {symbol:'HINDUNILVR', name:'Hindustan Unilever Ltd',       sector:'fmcg'},
-  {symbol:'ITC',        name:'ITC Ltd',                      sector:'fmcg'},
-  {symbol:'NESTLEIND',  name:'Nestle India Ltd',             sector:'fmcg'},
-  {symbol:'BRITANNIA',  name:'Britannia Industries Ltd',     sector:'fmcg'},
-  {symbol:'SUNPHARMA',  name:'Sun Pharmaceutical Industries',sector:'pharma'},
-  {symbol:'DRREDDY',    name:"Dr. Reddy's Laboratories",    sector:'pharma'},
-  {symbol:'CIPLA',      name:'Cipla Ltd',                    sector:'pharma'},
-  {symbol:'DIVISLAB',   name:"Divi's Laboratories Ltd",     sector:'pharma'},
-  {symbol:'ANGELONE',   name:'Angel One Ltd',                sector:'capital_markets'},
-  {symbol:'360ONE',     name:'360 One WAM Ltd',              sector:'capital_markets'},
-  {symbol:'MOFSL',      name:'Motilal Oswal Financial Svcs', sector:'capital_markets'},
-  {symbol:'DLF',        name:'DLF Ltd',                      sector:'real_estate'},
-  {symbol:'GODREJPROP', name:'Godrej Properties Ltd',        sector:'real_estate'},
-  {symbol:'PRESTIGE',   name:'Prestige Estates Projects',    sector:'real_estate'},
-  {symbol:'MARUTI',     name:'Maruti Suzuki India Ltd',      sector:'auto'},
-  {symbol:'TATAMOTORS', name:'Tata Motors Ltd',              sector:'auto'},
-  {symbol:'MM',         name:'Mahindra & Mahindra Ltd',      sector:'auto'},
-  {symbol:'BAJAJ-AUTO', name:'Bajaj Auto Ltd',               sector:'auto'},
-  {symbol:'TATASTEEL',  name:'Tata Steel Ltd',               sector:'metals'},
-  {symbol:'JSWSTEEL',   name:'JSW Steel Ltd',                sector:'metals'},
-  {symbol:'HINDALCO',   name:'Hindalco Industries Ltd',      sector:'metals'},
-  {symbol:'RELIANCE',   name:'Reliance Industries Ltd',      sector:'energy'},
-  {symbol:'ONGC',       name:'Oil & Natural Gas Corporation',sector:'energy'},
-  {symbol:'NTPC',       name:'NTPC Ltd',                     sector:'energy'},
-  {symbol:'COALINDIA',  name:'Coal India Ltd',               sector:'energy'},
-];
+let KNOWN_STOCKS = [];
+
+async function loadKnownStocks() {
+  try {
+    const res = await fetch('ind_nifty500list.csv');
+    if (!res.ok) throw new Error('Failed to load stock list: ' + res.status);
+    const text = await res.text();
+    KNOWN_STOCKS = text.split(/\r?\n/).slice(1).filter(Boolean).map(line => {
+      const [company, industry, symbol] = line.split(',');
+      return {
+        symbol: symbol?.trim() || '',
+        name: company?.trim() || symbol?.trim() || '',
+        sector: industry?.trim() || 'default'
+      };
+    }).filter(stock => stock.symbol);
+  } catch (err) {
+    console.warn('Could not load known stock list:', err.message || err);
+    KNOWN_STOCKS = [];
+  }
+}
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let activeStock=null, activeChart=null, priceChart=null, volChart=null;
@@ -1474,4 +1452,4 @@ document.documentElement.setAttribute('data-theme', _t);
 document.getElementById('theme-toggle').textContent = _t === 'light' ? '🌙' : '☀️';
 </script>
 </body>
-</html>
+</html>˘
