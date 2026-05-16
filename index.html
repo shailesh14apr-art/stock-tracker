@@ -645,6 +645,9 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 const _auth           = firebase.auth();
 const _googleProvider = new firebase.auth.GoogleAuthProvider();
+// Ensure the Google sign-in always shows an account chooser so the user
+// can pick which email to use when multiple accounts are signed in.
+_googleProvider.setCustomParameters({ prompt: 'select_account' });
 let _appInited           = false;
 let _loginChartInited    = false;
 let _pendingVerification = false; // true while we're sending a verification email
