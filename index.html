@@ -1229,6 +1229,8 @@ function renderScreenerMetrics(record) {
   const qcls=(v,hi,lo)=>v==null?'':v>=hi?'good':v<=lo?'bad':'neutral';
   const curr=ind.price??p.current, h52=ind.high52w??p.weekHigh52, l52=ind.low52w??p.weekLow52;
   const upside=fun.targetPrice&&curr?((fun.targetPrice-curr)/curr*100):null;
+  const divYieldRaw = fun.dividendYield;
+  const divYieldPct = divYieldRaw != null ? (divYieldRaw > 1 ? divYieldRaw : divYieldRaw * 100) : null;
   const cells=[
     {label:'Market Cap',value:fun.marketCapCr?fmtCr(fun.marketCapCr):'—',sub:''},
     {label:'Current Price',value:curr?'₹'+curr.toLocaleString('en-IN'):'—',sub:p.changePercent!=null?(p.changePercent>=0?'▲ +':'▼ ')+Math.abs(p.changePercent).toFixed(2)+'% today':'',subCls:p.changePercent>=0?'good':'bad'},
@@ -1238,7 +1240,7 @@ function renderScreenerMetrics(record) {
     {label:'Stock P/E',value:fun.pe?fun.pe.toFixed(1)+'x':'—',sub:fun.forwardPE?'Fwd P/E '+fun.forwardPE.toFixed(1)+'x':''},
     {label:'Price / Book',value:fmtX(fun.pbRatio),sub:fun.bookValue?'Book ₹'+fun.bookValue:''},
     {label:'EPS (TTM)',value:fun.eps?'₹'+fun.eps.toFixed(2):'—',valCls:qcls(fun.eps,0.01,-0.01)},
-    {label:'Div Yield',value:fun.dividendYield?(fun.dividendYield*100).toFixed(2)+'%':'—',sub:fun.dividendRate?'₹'+fun.dividendRate+' / share':'',valCls:qcls(fun.dividendYield,0.03,0)},
+    {label:'Div Yield',value:divYieldPct!=null?divYieldPct.toFixed(2)+'%':'—',sub:fun.dividendRate?'₹'+fun.dividendRate+' / share':'',valCls:qcls(divYieldPct,3,0)},
     'divider',
     {label:'ROE',value:fun.roe?fun.roe.toFixed(1)+'%':'—',valCls:qcls(fun.roe,15,5),sub:'Return on Equity'},
     {label:'ROCE',value:fun.roce?fun.roce.toFixed(1)+'%':'—',valCls:qcls(fun.roce,10,2),sub:'Return on Capital'},
