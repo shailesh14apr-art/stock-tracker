@@ -626,6 +626,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <!-- Firebase MUST be first — before Chart.js and the main script -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
@@ -640,6 +641,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "217756349152",
   appId: "1:217756349152:web:8decc60c71f7072826d685",
   measurementId: "G-2XJM3KXH2X"
+  databaseURL: "https://bazaarlens-f22ab-default-rtdb.firebaseio.com/"
 };
 
 firebase.initializeApp(FIREBASE_CONFIG);
