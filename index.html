@@ -105,6 +105,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .tf-btn.tf-active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .price-canvas-wrap{position:relative;height:320px;}
 .vol-canvas-wrap{position:relative;height:68px;margin-top:3px;}
+.price-canvas-wrap canvas,
+.vol-canvas-wrap canvas,
+.lo-chart-wrap canvas,
+.lo-vol-wrap canvas{width:100%;height:100%;display:block;}
 .chart-no-data{text-align:center;padding:60px 20px;color:var(--text3);font-size:13px;}
 .two-col{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
@@ -1445,19 +1449,23 @@ function initLoginChart() {
   const closes=rows.map(r=>r.c);
   function loEmaArr(arr,p){const k=2/(p+1),res=new Array(arr.length).fill(null);if(arr.length<p)return res;let e=arr.slice(0,p).reduce((a,b)=>a+b,0)/p;res[p-1]=e;for(let i=p;i<arr.length;i++){e=arr[i]*k+e*(1-k);res[i]=e;}return res;}
   const mkLine=s=>s.map((y,i)=>y!=null?{x:rows[i].t,y}:null).filter(Boolean);
+  const labels=rows.map(r=>new Date(r.t).toLocaleDateString('en-US',{month:'short',year:'2-digit'}));
   const gridCol='rgba(255,255,255,.04)', tickCol='#475569';
+  const baseOptions={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}}};
   try {
     new Chart(pCtx,{data:{datasets:[
       {type:'candlestick',data:rows.map(r=>({x:r.t,o:r.o,h:r.h,l:r.l,c:r.c})),color:{up:'#4ade80',down:'#f87171',unchanged:'#94a3b8'},borderColor:{up:'#16a34a',down:'#dc2626',unchanged:'#64748b'}},
       {type:'line',data:mkLine(loEmaArr(closes,20)),borderColor:'#fbbf24',borderWidth:1.5,pointRadius:0,tension:.2},
       {type:'line',data:mkLine(loEmaArr(closes,50)),borderColor:'#818cf8',borderWidth:1.5,pointRadius:0,tension:.2},
       {type:'line',data:mkLine(loEmaArr(closes,100)),borderColor:'#67e8f9',borderWidth:1.5,pointRadius:0,tension:.2,borderDash:[4,3]},
-    ]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:{type:'timeseries',time:{unit:'month',displayFormats:{month:"MMM ''yy"}},ticks:{color:tickCol,font:{size:10},maxTicksLimit:7},grid:{color:gridCol}},y:{position:'right',ticks:{color:tickCol,font:{size:10},callback:v=>v.toLocaleString('en-IN')},grid:{color:gridCol}}}}});
+    ]},options:{...baseOptions,scales:{x:{type:'timeseries',time:{unit:'month',displayFormats:{month:"MMM ''yy"}},ticks:{color:tickCol,font:{size:10},maxTicksLimit:7},grid:{color:gridCol}},y:{position:'right',ticks:{color:tickCol,font:{size:10},callback:v=>v.toLocaleString('en-IN')},grid:{color:gridCol}}}}});
     new Chart(vCtx,{type:'bar',data:{datasets:[{data:rows.map(r=>({x:r.t,y:r.v})),backgroundColor:rows.map(r=>r.c>=r.o?'rgba(74,222,128,.6)':'rgba(248,113,113,.6)'),borderWidth:0,borderRadius:1,categoryPercentage:.9,barPercentage:.9}]},
-      options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}},
-        scales:{x:{type:'timeseries',ticks:{display:false},grid:{display:false}},y:{position:'right',ticks:{color:tickCol,font:{size:9},maxTicksLimit:3,callback:v=>v>=1e8?(v/1e8).toFixed(0)+'B':(v/1e7).toFixed(0)+'Cr'},grid:{color:gridCol}}}}});
-  } catch(e) { console.warn('Login chart error:',e.message); }
+      options:{...baseOptions,scales:{x:{type:'timeseries',ticks:{display:false},grid:{display:false}},y:{position:'right',ticks:{color:tickCol,font:{size:9},maxTicksLimit:3,callback:v=>v>=1e8?(v/1e8).toFixed(0)+'B':(v/1e7).toFixed(0)+'Cr'},grid:{color:gridCol}}}}});
+  } catch(e) {
+    console.warn('Login chart error:',e.message, '- falling back to a simple decorative chart.');
+    new Chart(pCtx,{type:'line',data:{labels, datasets:[{label:'Price',data:closes,borderColor:'#60a5fa',backgroundColor:'rgba(59,130,246,.18)',pointRadius:0,tension:.35}]},options:{...baseOptions,scales:{x:{ticks:{color:tickCol,font:{size:10}}},y:{position:'right',ticks:{color:tickCol,font:{size:10},callback:v=>v.toLocaleString('en-IN')},grid:{color:gridCol}}}}});
+    new Chart(vCtx,{type:'bar',data:{labels, datasets:[{label:'Volume',data:rows.map(r=>Math.round(r.v/1e7)),backgroundColor:rows.map(r=>r.c>=r.o?'rgba(74,222,128,.6)':'rgba(248,113,113,.6)'),borderWidth:0,borderRadius:1,categoryPercentage:.9,barPercentage:.9}]},options:{...baseOptions,scales:{x:{ticks:{display:false}},y:{position:'right',ticks:{color:tickCol,font:{size:9},maxTicksLimit:3},grid:{color:gridCol}}}}});
+  }
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
