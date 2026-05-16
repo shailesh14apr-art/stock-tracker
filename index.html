@@ -1107,7 +1107,38 @@ function renderSidebar() {
       <div class="stock-name">${name}</div></div>`;
   }).join('');
 }
-function selectStock(sym) { activeStock=sym; renderSidebar(); const d=getStoredData()[sym]; if(!d){renderPending(sym);return;} renderAnalysis(d); }
+function selectStock(sym) {
+  activeStock = sym; renderSidebar();
+  const d = getStoredData()[sym];
+  if (!d) { renderPending(sym); return; }
+  // Render current stored analysis immediately
+  renderAnalysis(d);
+  // Fetch latest price in background and update UI when available
+  fetchLatestPrice(sym).then(p => {
+    if (!p) return;
+    const stored = getStoredData();
+    const rec = stored[sym] || d;
+    rec.price = rec.price || {};
+    if (p.price != null) rec.price.current = p.price;
+    if (p.changePct != null) rec.price.changePercent = p.changePct;
+    if (p.high52 != null) rec.price.weekHigh52 = p.high52;
+    if (p.low52 != null) rec.price.weekLow52 = p.low52;
+    // persist and re-render (sidebar + analysis) to show fresh price
+    storeAnalysis(sym, rec);
+    renderSidebar();
+    // update only metrics/price area by re-rendering analysis
+    renderAnalysis(rec);
+  }).catch(() => {});
+}
+
+async function fetchLatestPrice(sym) {
+  try {
+    const res = await fetch(`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&priceOnly=1`);
+    if (!res.ok) return null;
+    const j = await res.json();
+    return { price: j.price ?? j.price, changePct: j.changePct ?? j.changePct, high52: j.high52, low52: j.low52, marketCap: j.marketCap };
+  } catch (err) { return null; }
+}
 
 // ── PENDING / LOADING / ERROR ──────────────────────────────────────────────────
 function renderPending(sym) {

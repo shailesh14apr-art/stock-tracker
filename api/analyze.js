@@ -29,6 +29,23 @@ export default async function handler(req) {
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
 
+  // Lightweight price-only endpoint to support client-side quick updates
+  if (p.get('priceOnly') === '1') {
+    try {
+      const yahooSym = symbol.toUpperCase() + '.NS';
+      const q7Res = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`);
+      const q7 = (await q7Res.json())?.quoteResponse?.result?.[0] || {};
+      const price = q7.regularMarketPrice ?? null;
+      const changePct = q7.regularMarketChangePercent ?? (q7.regularMarketChange != null && q7.regularMarketPreviousClose ? ((q7.regularMarketChange / q7.regularMarketPreviousClose) * 100) : null);
+      const high52 = q7.fiftyTwoWeekHigh ?? null;
+      const low52 = q7.fiftyTwoWeekLow ?? null;
+      const marketCap = q7.marketCap ?? null;
+      return reply({ price, changePct, high52, low52, marketCap }, 200, cors);
+    } catch (err) {
+      return reply({ error: 'price fetch failed' }, 500, cors);
+    }
+  }
+
   // fundamentals passed from frontend (quarterlyResults stripped client-side to keep URL short)
   let fund = {};
   try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
