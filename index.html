@@ -346,6 +346,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .lo-sent-note{font-size:11px;color:#94a3b8;margin-bottom:18px;}
 .lo-sent-back{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
 .lo-resend{background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;margin-top:8px;font-family:inherit;text-decoration:underline;}
+
+/* Google redirect fallback */
+.lo-redirect-wrap{text-align:center;margin-top:10px;display:none;}
+.lo-redirect-wrap a{font-size:12px;color:#2563eb;text-decoration:none;padding:6px 12px;border:1px solid #bfdbfe;border-radius:7px;background:#eff6ff;display:inline-block;transition:background .15s;}
+.lo-redirect-wrap a:hover{background:#dbeafe;}
+.lo-domain-hint{font-size:11px;color:#94a3b8;margin-top:6px;text-align:center;display:none;}
 </style>
 </head>
 <body>
@@ -415,6 +421,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         Continue with Google
       </button>
       <div class="lo-auth-error" id="lo-auth-error"></div>
+      <div class="lo-redirect-wrap" id="lo-redirect-wrap">
+        <a href="#" onclick="handleGoogleRedirect(event)">🔄 Try signing in via redirect instead</a>
+      </div>
+      <div class="lo-domain-hint" id="lo-domain-hint"></div>
       <div class="lo-signup-row">Don't have an account?<a href="#" onclick="loSwitchToSignup(event)">Get started →</a></div>
       </div><!-- end lo-form-area -->
     </div>
@@ -633,10 +643,29 @@ let _pendingVerification = false; // true while we're sending a verification ema
 let _prevPage            = 'hub'; // track where to return from account page
 let _pendingVerifEmail   = '';    // email used for last verification send
 
-// Handle redirect sign-in result (fallback for browsers that blocked popup)
+// Handle redirect sign-in result (fires on page load after a signInWithRedirect)
 _auth.getRedirectResult()
-  .then(result => { /* onAuthStateChanged handles the rest */ })
-  .catch(err => { if (err.code && err.code !== 'auth/no-auth-event') console.error('Redirect error:', err.code); });
+  .then(result => {
+    // Successful redirect sign-in — onAuthStateChanged handles navigation
+    if (result && result.user) console.log('Redirect sign-in OK:', result.user.email);
+  })
+  .catch(err => {
+    if (!err.code || err.code === 'auth/no-auth-event') return; // Normal — no redirect was attempted
+    console.error('Redirect sign-in error:', err.code, err.message);
+    // Show the error to the user (we're back on the login page at this point)
+    setTimeout(() => {
+      const overlay = document.getElementById('login-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        if (err.code === 'auth/unauthorized-domain') {
+          loShowError('Domain not authorized in Firebase.');
+          const hint = document.getElementById('lo-domain-hint');
+          if (hint) { hint.textContent = 'Add "' + window.location.hostname + '" to Firebase → Authentication → Settings → Authorized domains'; hint.style.display='block'; }
+        } else {
+          loShowError('Google sign-in failed (' + err.code + '). Please try again.');
+        }
+      }
+    }, 400);
+  });
 
 // ── AUTH STATE ─────────────────────────────────────────────────────────────────
 _auth.onAuthStateChanged(user => {
@@ -740,6 +769,11 @@ function loResetLoginForm() {
   const label = document.getElementById('lo-signin-label');
   if (label) label.textContent = 'Sign In';
   if (row) row.innerHTML = 'Don\'t have an account?<a href="#" onclick="loSwitchToSignup(event)"> Get started →</a>';
+  // Hide redirect fallback elements
+  const rw = document.getElementById('lo-redirect-wrap');
+  const dh = document.getElementById('lo-domain-hint');
+  if (rw) rw.style.display = 'none';
+  if (dh) dh.style.display = 'none';
 }
 
 function handleLoginEmail() {
@@ -840,30 +874,63 @@ const GOOGLE_BTN_INNER = `<svg class="lo-google-icon" viewBox="0 0 48 48" xmlns=
 
 function handleLoginGoogle() {
   loClearError();
+  document.getElementById('lo-redirect-wrap').style.display = 'none';
+  document.getElementById('lo-domain-hint').style.display = 'none';
   const btn=document.getElementById('lo-google-btn');
   btn.classList.add('loading');
-  btn.innerHTML = '<span style="font-size:13px;color:#334155">Signing in with Google…</span>';
+  btn.innerHTML = '<span style="font-size:13px;color:#334155">Opening Google sign-in…</span>';
 
-  // Mobile browsers handle redirects more reliably than popups
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile) {
-    _auth.signInWithRedirect(_googleProvider);
-    return;
-  }
+  _auth.signInWithPopup(_googleProvider)
+    .then(() => { /* onAuthStateChanged handles navigation */ })
+    .catch(err => {
+      btn.classList.remove('loading');
+      btn.innerHTML = GOOGLE_BTN_INNER;
 
-  _auth.signInWithPopup(_googleProvider).catch(err => {
-    btn.classList.remove('loading');
-    btn.innerHTML = GOOGLE_BTN_INNER;
-    if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-      // Browser blocked the popup — fall back to redirect
-      loShowError('Popup blocked — redirecting to Google…');
-      setTimeout(() => _auth.signInWithRedirect(_googleProvider), 900);
-    } else if (err.code === 'auth/popup-closed-by-user') {
-      // User dismissed — do nothing
-    } else {
-      loShowError('Google sign-in failed (' + err.code + '). Please try again.');
-    }
-  });
+      switch (err.code) {
+        case 'auth/popup-closed-by-user':
+        case 'auth/cancelled-popup-request':
+          // User closed the popup — silent, no error shown
+          break;
+
+        case 'auth/popup-blocked':
+          // Popup blocked by browser — offer redirect as alternative
+          loShowError('Popup was blocked by your browser.');
+          document.getElementById('lo-redirect-wrap').style.display = 'block';
+          break;
+
+        case 'auth/unauthorized-domain':
+          // Domain not added to Firebase authorized list
+          loShowError('This domain is not authorized for sign-in.');
+          const hint = document.getElementById('lo-domain-hint');
+          hint.textContent = 'Fix: Firebase Console → Authentication → Settings → Authorized domains → add "' + window.location.hostname + '"';
+          hint.style.display = 'block';
+          break;
+
+        case 'auth/operation-not-allowed':
+          loShowError('Google sign-in is not enabled. Enable it in Firebase → Authentication → Sign-in method.');
+          break;
+
+        case 'auth/network-request-failed':
+          loShowError('Network error. Please check your connection and try again.');
+          break;
+
+        default:
+          loShowError('Google sign-in failed (' + err.code + '). Please try again.');
+          console.error('Google sign-in error:', err);
+      }
+    });
+}
+
+function handleGoogleRedirect(e) {
+  if (e) e.preventDefault();
+  loClearError();
+  document.getElementById('lo-redirect-wrap').style.display = 'none';
+  document.getElementById('lo-domain-hint').style.display = 'none';
+  const btn=document.getElementById('lo-google-btn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span style="font-size:13px;color:#334155">Redirecting to Google…</span>';
+  // Small delay so the user sees the state change before redirect
+  setTimeout(() => _auth.signInWithRedirect(_googleProvider), 300);
 }
 
 function loSwitchToSignup(e) {
