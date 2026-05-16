@@ -1334,6 +1334,7 @@ function renderAnalysis(d) {
       <div class="signal-banner ${d.signal}"><div class="signal-icon">${emoji}</div>
         <div><div class="signal-label">AI Signal</div><div class="signal-title ${d.signal}">${label}</div><div class="signal-reason">${d.signalReason}</div></div>
       </div>
+      ${renderScreenerMetrics(d)}
       <div class="price-chart-card">
         <div class="chart-controls">
           <div class="section-title" style="margin-bottom:0">📈 ${d.symbol} — Daily Candlestick</div>
@@ -1347,7 +1348,6 @@ function renderAnalysis(d) {
         </div>
         ${hasChart?`<div class="price-canvas-wrap"><canvas id="price-chart"></canvas></div><div class="vol-canvas-wrap"><canvas id="volume-chart"></canvas></div>`:`<div class="chart-no-data">↺ Click <strong>Refresh</strong> to load the price chart</div>`}
       </div>
-      ${renderScreenerMetrics(d)}
       ${renderAICard(d)}
       ${d.quarterly?.length?`<div class="two-col"><div><div class="card"><div class="section-title">📈 Quarterly Performance (₹ Cr)</div><div class="chart-wrap"><canvas id="chart-main"></canvas></div></div></div><div style="display:flex;flex-direction:column;gap:16px">${renderTargets(d,upside)}${renderNews(d)}</div></div>`:`<div style="display:flex;gap:20px">${renderTargets(d,upside)}${renderNews(d)}</div>`}
       ${renderThesis(d)}${renderRisks(d)}
