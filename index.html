@@ -1230,7 +1230,14 @@ function renderScreenerMetrics(record) {
   const curr=ind.price??p.current, h52=ind.high52w??p.weekHigh52, l52=ind.low52w??p.weekLow52;
   const upside=fun.targetPrice&&curr?((fun.targetPrice-curr)/curr*100):null;
   const divYieldRaw = fun.dividendYield;
-  const divYieldPct = divYieldRaw != null ? (divYieldRaw > 1 ? divYieldRaw : divYieldRaw * 100) : null;
+  const normalizeYield = v => {
+    if (v == null) return null;
+    const n = Number(v);
+    if (Number.isNaN(n)) return null;
+    if (n > 20) return n / 100;              // raw percent like 162 -> 1.62
+    return n > 1 ? n : n * 100;              // ratio 0.0162 -> 1.62, percent 1.62 -> 1.62
+  };
+  const divYieldPct = normalizeYield(divYieldRaw);
   const cells=[
     {label:'Market Cap',value:fun.marketCapCr?fmtCr(fun.marketCapCr):'—',sub:''},
     {label:'Current Price',value:curr?'₹'+curr.toLocaleString('en-IN'):'—',sub:p.changePercent!=null?(p.changePercent>=0?'▲ +':'▼ ')+Math.abs(p.changePercent).toFixed(2)+'% today':'',subCls:p.changePercent>=0?'good':'bad'},
