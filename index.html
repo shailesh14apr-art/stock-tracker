@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1187,7 +1187,7 @@ function renderChatIntro() {
     <div class="chat-intro-icon">🤖</div>
     <div class="chat-intro-title">AI Financial Expert</div>
     <div class="chat-intro-sub">Ask me anything about ${currentRecord?.symbol || 'this stock'} — technicals, fundamentals, risks or outlook.</div>
-    <div class="chat-chips">${chips.map(q => `<button class="chat-chip" onclick="sendChatMessage(${JSON.stringify(q)})">${q}</button>`).join('')}</div>
+    <div class="chat-chips">${chips.map(q => `<button class="chat-chip" onclick="sendChatMessage(this.dataset.q)" data-q="${q.replace(/"/g,'&quot;')}">${q}</button>`).join('')}</div>
   </div>`;
 }
 
