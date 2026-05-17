@@ -348,23 +348,30 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .lo-domain-hint{font-size:11px;color:#94a3b8;margin-top:6px;text-align:center;display:none;}
 
 
-/* ── AI CHAT — EMBEDDED CARD ────────────────────────────────────────────── */
-.chat-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;}
-.chat-card-hdr-left{display:flex;align-items:center;gap:10px;min-width:0;}
-.chat-card-hdr-left h3{font-size:13px;font-weight:700;color:var(--ai-text);text-transform:uppercase;letter-spacing:.6px;margin:0;}
-.chat-card-hdr-left p{font-size:11px;color:var(--text3);margin:2px 0 0;}
-.chat-new-btn{background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s;flex-shrink:0;white-space:nowrap;}
+/* ── AI CHAT HERO CARD ───────────────────────────────────────────────────── */
+.chat-hero-card{position:relative;border-radius:14px;padding:20px 22px 16px;background:var(--surface);box-shadow:0 0 28px rgba(56,189,248,.1),0 0 56px rgba(59,130,246,.06);}
+.chat-hero-card::before{content:'';position:absolute;inset:0;border-radius:14px;padding:1.5px;background:linear-gradient(135deg,rgba(56,189,248,.75),rgba(59,130,246,.55),rgba(139,92,246,.4));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:0;}
+[data-theme="light"] .chat-hero-card{box-shadow:0 0 28px rgba(14,165,233,.14),0 0 56px rgba(37,99,235,.07),0 4px 16px rgba(0,0,0,.05);}
+.chat-hero-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;position:relative;z-index:1;}
+.chat-hero-hdr-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.chat-hero-title{font-size:14px;font-weight:700;color:var(--ai-text);}
+.chat-hero-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.chat-hero-badge{font-size:9px;font-weight:700;background:var(--ai-badge);color:#fff;padding:2px 8px;border-radius:20px;flex-shrink:0;}
+.chat-new-btn{display:none;background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s;white-space:nowrap;}
 .chat-new-btn:hover{background:var(--surface2);color:var(--text);}
-/* Intro / chips */
-.chat-intro-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
-.chat-chips{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-@media(max-width:768px){.chat-chips{grid-template-columns:1fr;}}
-.chat-chip{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text2);cursor:pointer;text-align:left;font-family:inherit;transition:all .15s;line-height:1.4;}
-.chat-chip:hover{background:rgba(59,130,246,.12);border-color:var(--accent);color:var(--text);}
 /* Message thread */
-.chat-thread{overflow-y:auto;display:flex;flex-direction:column;gap:10px;max-height:440px;min-height:20px;margin-bottom:14px;-webkit-overflow-scrolling:touch;}
+.chat-thread{overflow-y:auto;display:none;flex-direction:column;gap:10px;max-height:380px;margin-bottom:14px;padding-right:2px;position:relative;z-index:1;}
 .chat-thread::-webkit-scrollbar{width:3px;}
 .chat-thread::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+/* Suggestions panel — hidden until input is focused */
+.chat-sug-panel{max-height:0;opacity:0;overflow:hidden;transition:max-height .28s ease,opacity .2s ease,margin .28s ease;margin-bottom:0;position:relative;z-index:1;}
+.chat-sug-panel.open{max-height:200px;opacity:1;margin-bottom:12px;}
+.chat-sug-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;}
+.chat-chips{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+@media(max-width:640px){.chat-chips{grid-template-columns:1fr;}}
+.chat-chip{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text2);cursor:pointer;text-align:left;font-family:inherit;transition:all .15s;line-height:1.35;}
+.chat-chip:hover{background:rgba(59,130,246,.12);border-color:var(--accent);color:var(--text);}
+/* Message bubbles */
 .chat-msg{display:flex;flex-direction:column;gap:4px;}
 .chat-msg.user{align-items:flex-end;}
 .chat-msg.assistant{align-items:flex-start;}
@@ -381,16 +388,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .chat-dot:nth-child(2){animation-delay:.18s;}
 .chat-dot:nth-child(3){animation-delay:.36s;}
 @keyframes cDot{0%,60%,100%{opacity:.25;transform:scale(1);}30%{opacity:1;transform:scale(1.2);}}
-/* Input row */
-.chat-input-row{display:flex;gap:8px;align-items:flex-end;padding-top:12px;border-top:1px solid var(--border);}
-#chat-input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;color:var(--text);font-size:13px;font-family:inherit;resize:none;outline:none;max-height:90px;min-height:38px;line-height:1.5;overflow-y:auto;}
+/* Input */
+.chat-input-row{display:flex;gap:8px;align-items:flex-end;padding-top:12px;border-top:1px solid var(--border);position:relative;z-index:1;}
+#chat-input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;color:var(--text);font-size:13px;font-family:inherit;resize:none;outline:none;max-height:90px;min-height:38px;line-height:1.5;overflow-y:auto;transition:border-color .15s;}
 #chat-input:focus{border-color:var(--accent);}
 #chat-input::placeholder{color:var(--text3);}
 #chat-send{width:36px;height:36px;border-radius:9px;background:var(--accent);border:none;color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
 #chat-send:hover{background:var(--accent2);}
 #chat-send:active{transform:scale(.93);}
 #chat-send:disabled{background:var(--border2);cursor:not-allowed;color:var(--text3);}
-.chat-foot{font-size:9px;color:var(--text3);margin-top:8px;text-align:center;line-height:1.5;}
+.chat-foot{font-size:9px;color:var(--text3);margin-top:8px;text-align:center;line-height:1.5;position:relative;z-index:1;}
 
 /* ── MOBILE BOTTOM NAV ──────────────────────────────────────────────────── */
 #mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--surface);border-top:1px solid var(--border);padding:6px 0 max(6px,env(safe-area-inset-bottom,0px));grid-template-columns:repeat(4,1fr);}
@@ -1060,33 +1067,33 @@ async function syncWatchlistFromFirebase() {
   } catch (err) { console.warn('Could not sync watchlist from Firebase:', err); }
 }
 
-// ── AI CHAT — EMBEDDED ────────────────────────────────────────────────────────
-let _chatMsgs = [], _chatLoading = false;
+// ── AI CHAT HERO ─────────────────────────────────────────────────────────────
+let _chatMsgs = [], _chatLoading = false, _chatSugTimer = null;
 
 const CHAT_CHIPS = {
   BUY_MORE: [
     'Why is this a Buy More signal?',
-    'What price level should I use as stop-loss?',
-    'How does the valuation compare to sector peers?',
+    'What stop-loss levels should I use?',
+    'How does the valuation look vs sector peers?',
     'What could invalidate the bullish thesis?',
-    'What is the short-term price outlook?',
+    'What is the short-term price target?',
     'Summarise the key technical setup',
   ],
   HOLD: [
     'What would push this to a Buy More signal?',
     'What would trigger a Review / sell signal?',
-    'Is the current valuation attractive at this price?',
+    'Is the current valuation attractive here?',
     'Explain the technical setup in simple terms',
-    'What are the key risks over the next quarter?',
+    'What are the key risks over next quarter?',
     'Is there a better entry point to wait for?',
   ],
   REVIEW: [
-    'Should I exit this position or wait?',
-    'Is this a temporary pullback or trend reversal?',
+    'Should I exit now or wait for recovery?',
+    'Is this a pullback or a trend reversal?',
     'At what price does this become attractive again?',
     'What are the biggest red flags right now?',
     'How are the fundamentals holding up?',
-    'What would change the signal back to Hold/Buy?',
+    'What would flip the signal back to Hold/Buy?',
   ],
   DEFAULT: [
     'Give me a quick summary of this stock',
@@ -1099,20 +1106,31 @@ const CHAT_CHIPS = {
 };
 
 function renderChatCard(d) {
-  return `<div class="card" style="border:1px solid var(--ai-border);background:var(--ai-bg)">
-    <div class="chat-card-hdr">
-      <div class="chat-card-hdr-left">
-        <span style="font-size:22px">🤖</span>
-        <div>
-          <h3>Ask AI about ${d.symbol}</h3>
-          <p>Powered by Claude Sonnet &middot; financial expert mode</p>
+  return `<div class="chat-hero-card">
+    <div class="chat-hero-hdr">
+      <div class="chat-hero-hdr-left">
+        <span style="font-size:24px;flex-shrink:0">🤖</span>
+        <div style="min-width:0">
+          <div class="chat-hero-title">Ask AI about ${d.symbol}</div>
+          <div class="chat-hero-sub">Powered by Claude Sonnet &middot; financial expert mode</div>
         </div>
       </div>
-      <button class="chat-new-btn" onclick="clearChat()">↺ New chat</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span class="chat-hero-badge">Claude Sonnet</span>
+        <button class="chat-new-btn" id="chat-new-btn" onclick="clearChat()">↺ New</button>
+      </div>
     </div>
     <div class="chat-thread" id="chat-messages"></div>
+    <div class="chat-sug-panel" id="chat-sug-panel">
+      <div class="chat-sug-lbl">💡 Suggested questions</div>
+      <div class="chat-chips" id="chat-chips-grid"></div>
+    </div>
     <div class="chat-input-row">
-      <textarea id="chat-input" placeholder="Ask about fundamentals, technicals, risks, outlook…" rows="1"
+      <textarea id="chat-input"
+        placeholder="Ask about this stock — technicals, fundamentals, risks, outlook…"
+        rows="1"
+        onfocus="showChatSuggestions()"
+        onblur="hideChatSuggestionsDelayed()"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
       <button id="chat-send" onclick="sendChatMessage()" aria-label="Send">&#8593;</button>
@@ -1121,28 +1139,62 @@ function renderChatCard(d) {
   </div>`;
 }
 
-function renderChatIntro() {
-  const el = document.getElementById('chat-messages');
-  if (!el) return;
-  const signal = currentRecord?.signal || 'DEFAULT';
+function populateChatChips(signal) {
+  const grid = document.getElementById('chat-chips-grid');
+  if (!grid) return;
   const chips = (CHAT_CHIPS[signal] || CHAT_CHIPS.DEFAULT).slice(0, 6);
-  el.innerHTML = `<div>
-    <div class="chat-intro-lbl">Suggested questions</div>
-    <div class="chat-chips">${chips.map(q =>
-      `<button class="chat-chip" onclick="sendChatMessage(this.dataset.q)" data-q="${q.replace(/"/g,'&quot;')}">${q}</button>`
-    ).join('')}</div>
-  </div>`;
+  grid.innerHTML = chips.map(q =>
+    `<button class="chat-chip" onmousedown="selectChatChip(this.dataset.q)" data-q="${q.replace(/"/g,'&quot;')}">${q}</button>`
+  ).join('');
+}
+
+function showChatSuggestions() {
+  clearTimeout(_chatSugTimer);
+  const panel = document.getElementById('chat-sug-panel');
+  if (panel) panel.classList.add('open');
+}
+
+function hideChatSuggestionsDelayed() {
+  _chatSugTimer = setTimeout(() => {
+    const panel = document.getElementById('chat-sug-panel');
+    if (panel) panel.classList.remove('open');
+  }, 220);
+}
+
+function selectChatChip(q) {
+  clearTimeout(_chatSugTimer);
+  const input = document.getElementById('chat-input');
+  if (input) {
+    input.value = q;
+    input.focus();
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 90) + 'px';
+  }
+  const panel = document.getElementById('chat-sug-panel');
+  if (panel) panel.classList.remove('open');
 }
 
 function clearChat() {
   _chatMsgs = [];
-  renderChatIntro();
+  const thread = document.getElementById('chat-messages');
+  if (thread) { thread.innerHTML = ''; thread.style.display = 'none'; }
+  const panel = document.getElementById('chat-sug-panel');
+  if (panel) panel.classList.remove('open');
+  const input = document.getElementById('chat-input');
+  if (input) {
+    input.value = '';
+    input.style.height = '38px';
+    input.placeholder = 'Ask about this stock — technicals, fundamentals, risks, outlook…';
+  }
+  const btn = document.getElementById('chat-new-btn');
+  if (btn) btn.style.display = 'none';
 }
 
 function renderChatMessages() {
   const el = document.getElementById('chat-messages');
   if (!el) return;
-  if (_chatMsgs.length === 0) { renderChatIntro(); return; }
+  if (_chatMsgs.length === 0) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
   el.innerHTML = _chatMsgs.map(m => {
     const t = m.ts ? new Date(m.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '';
     const body = m.role === 'user' ? escCht(m.content) : fmtChtMd(m.content);
@@ -1155,6 +1207,10 @@ function renderChatMessages() {
     el.innerHTML += `<div class="chat-msg assistant"><div class="chat-typing"><div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div></div></div>`;
   }
   el.scrollTop = el.scrollHeight;
+  const btn = document.getElementById('chat-new-btn');
+  if (btn) btn.style.display = '';
+  const input = document.getElementById('chat-input');
+  if (input && !_chatLoading) input.placeholder = 'Ask a follow-up…';
 }
 
 function escCht(t) { return t.replace(/&/g,'&amp;').replace(/\u003C/g,'&lt;').replace(/\u003E/g,'&gt;').split('\n').join('<br>'); }
@@ -1173,8 +1229,10 @@ async function sendChatMessage(prefill) {
   const text = (prefill || input?.value || '').trim();
   if (!text || _chatLoading || !currentRecord) return;
   if (input) { input.value = ''; input.style.height = '38px'; }
-  const btn = document.getElementById('chat-send');
-  if (btn) btn.disabled = true;
+  const sendBtn = document.getElementById('chat-send');
+  if (sendBtn) sendBtn.disabled = true;
+  const panel = document.getElementById('chat-sug-panel');
+  if (panel) panel.classList.remove('open');
 
   _chatMsgs.push({ role:'user', content:text, ts:Date.now() });
   _chatLoading = true;
@@ -1194,7 +1252,7 @@ async function sendChatMessage(prefill) {
   }
 
   _chatLoading = false;
-  if (btn) btn.disabled = false;
+  if (sendBtn) sendBtn.disabled = false;
   renderChatMessages();
 }
 
@@ -1292,6 +1350,7 @@ function renderSidebar() {
 }
 
 function selectStock(sym) {
+  if (sym !== activeStock) { _chatMsgs = []; }
   activeStock = sym; renderSidebar();
   const d = getStoredData()[sym];
   if (!d) { renderPending(sym); return; }
@@ -1553,6 +1612,7 @@ function renderAnalysis(d) {
       </div>
     </div>
     <div class="content">
+      ${renderChatCard(d)}
       <div class="signal-banner ${d.signal}"><div class="signal-icon">${emoji}</div>
         <div><div class="signal-label">AI Signal</div><div class="signal-title ${d.signal}">${label}</div><div class="signal-reason">${d.signalReason}</div></div>
       </div>
@@ -1571,13 +1631,16 @@ function renderAnalysis(d) {
         ${hasChart?`<div class="price-canvas-wrap"><canvas id="price-chart"></canvas></div><div class="vol-canvas-wrap"><canvas id="volume-chart"></canvas></div>`:`<div class="chart-no-data">↺ Click <strong>Refresh</strong> to load the price chart</div>`}
       </div>
       ${renderAICard(d)}
-      ${renderChatCard(d)}
+      
       ${d.quarterly?.length?`<div class="two-col"><div><div class="card"><div class="section-title">📈 Quarterly Performance (₹ Cr)</div><div class="chart-wrap"><canvas id="chart-main"></canvas></div></div></div><div style="display:flex;flex-direction:column;gap:16px">${renderTargets(d,upside)}${renderNews(d)}</div></div>`:`<div style="display:flex;gap:20px">${renderTargets(d,upside)}${renderNews(d)}</div>`}
       ${renderThesis(d)}${renderRisks(d)}
     </div>`;
   if(hasChart) setTimeout(()=>renderPriceChart(d,'M3'),60);
   if(d.quarterly?.length) setTimeout(()=>renderChart(d),60);
-  _chatMsgs=[]; setTimeout(()=>renderChatIntro(),60);
+  setTimeout(()=>{
+    populateChatChips(d.signal||'DEFAULT');
+    if(_chatMsgs.length>0) renderChatMessages();
+  },60);
 }
 
 function renderTargets(d,upside) {
