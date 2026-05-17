@@ -2,6 +2,29 @@ export const config = { runtime: 'edge' };
 
 const YF_CHART = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
+// Browser-like headers — Yahoo Finance blocks bare Node/fetch user agents
+const YF_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Referer': 'https://finance.yahoo.com/',
+  'Origin': 'https://finance.yahoo.com',
+};
+
+// Try query1 then query2 — Vercel edge IPs are sometimes blocked on query1
+async function fetchYF(path, timeout = 7000) {
+  for (const host of ['query1', 'query2']) {
+    try {
+      const res = await fetch(`https://${host}.finance.yahoo.com${path}`, {
+        headers: YF_HEADERS,
+        signal: AbortSignal.timeout(timeout),
+      });
+      if (res.ok) return res;
+    } catch (_) {}
+  }
+  return null;
+}
+
 const SECTOR_CONTEXT = {
   railways:       'Indian railways/capital goods — order book execution, EBITDA margin expansion, government capex cycle.',
   banking:        'Indian banking — NIM trajectory, GNPA trend, loan growth, ROE vs cost of equity.',
@@ -29,29 +52,34 @@ export default async function handler(req) {
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
 
-  // Lightweight price-only endpoint to support client-side quick updates
+  // priceOnly mode — fast price refresh without full analysis
   if (p.get('priceOnly') === '1') {
+    const yahooSym = symbol.toUpperCase() + '.NS';
     try {
-      const yahooSym = symbol.toUpperCase() + '.NS';
-      const q7Res = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`);
-      const q7 = (await q7Res.json())?.quoteResponse?.result?.[0] || {};
-      const price = q7.regularMarketPrice ?? null;
-      const changePct = q7.regularMarketChangePercent ?? (q7.regularMarketChange != null && q7.regularMarketPreviousClose ? ((q7.regularMarketChange / q7.regularMarketPreviousClose) * 100) : null);
-      const high52 = q7.fiftyTwoWeekHigh ?? null;
-      const low52 = q7.fiftyTwoWeekLow ?? null;
-      const marketCap = q7.marketCap ?? null;
-      return reply({ price, changePct, high52, low52, marketCap }, 200, cors);
-    } catch (err) {
-      return reply({ error: 'price fetch failed' }, 500, cors);
+      const res = await fetchYF(`/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&range=5d`);
+      if (!res) return reply({ error: 'price fetch failed' }, 500, cors);
+      const d = await res.json();
+      const m = d?.chart?.result?.[0]?.meta || {};
+      const q = d?.chart?.result?.[0]?.indicators?.quote?.[0] || {};
+      const closes = (q.close || []).filter(Boolean);
+      const price = closes.at(-1) || m.regularMarketPrice;
+      const prev  = closes.at(-2) || m.chartPreviousClose;
+      const changePct = prev ? ((price - prev) / prev) * 100 : 0;
+      return reply({
+        price: price ? +price.toFixed(2) : null,
+        changePct: +changePct.toFixed(2),
+        high52: m.fiftyTwoWeekHigh || null,
+        low52:  m.fiftyTwoWeekLow  || null,
+      }, 200, cors);
+    } catch (e) {
+      return reply({ error: e.message }, 500, cors);
     }
   }
 
-  // fundamentals passed from frontend (quarterlyResults stripped client-side to keep URL short)
   let fund = {};
   try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
 
   if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
-
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set' }, 500, cors);
 
@@ -60,114 +88,110 @@ export default async function handler(req) {
     const today    = new Date();
     const oneYrAgo = new Date(today); oneYrAgo.setFullYear(today.getFullYear() - 1);
 
-    // ── 1. Fetch 1yr daily OHLCV ──────────────────────────────────────────
-    const chartRes = await fetch(
-      `${YF_CHART}/${encodeURIComponent(yahooSym)}?interval=1d&period1=${Math.floor(oneYrAgo/1000)}&period2=${Math.floor(today/1000)}`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+    // ── 1. OHLCV (1yr daily) ─────────────────────────────────────────────────
+    const chartRes = await fetchYF(
+      `/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&period1=${Math.floor(oneYrAgo/1000)}&period2=${Math.floor(today/1000)}`
     );
-    if (!chartRes.ok) throw new Error(`Yahoo Finance: HTTP ${chartRes.status}`);
+    if (!chartRes) throw new Error(`Could not reach Yahoo Finance for ${symbol}`);
 
     const chartData = await chartRes.json();
     const result    = chartData?.chart?.result?.[0];
     if (!result) throw new Error(chartData?.chart?.error?.description || `No chart data for ${symbol}`);
 
+    const meta = result.meta || {};
     const q0   = result.indicators?.quote?.[0] || {};
-    // Full OHLCV rows — t in ms for Chart.js timeseries scale
-    const rows = (result.timestamp || [])
+    const rows  = (result.timestamp || [])
       .map((ts, i) => ({
         t: ts * 1000,
-        o: q0.open?.[i],
-        h: q0.high?.[i],
-        l: q0.low?.[i],
-        c: q0.close?.[i],
+        o: q0.open?.[i], h: q0.high?.[i], l: q0.low?.[i], c: q0.close?.[i],
         v: q0.volume?.[i] ?? 0,
       }))
       .filter(r => r.c != null && r.o != null && r.h != null && r.l != null);
 
     const closes  = rows.map(r => r.c);
     const volumes = rows.map(r => r.v);
-
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
-    // ── 1b. Auto-fetch fundamentals from Yahoo Finance (two-pass) ───────────
-    // Pass 1: v7/quote  — valuation metrics, generally accessible
-    // Pass 2: v10/quoteSummary — profitability/quality metrics, may be rate-limited
-    // Manual fundamentals.json data always wins on overlap
+    // ── 2. Fundamentals: three passes ────────────────────────────────────────
     let yfFund = {};
+    let yfFetchedAny = false;
 
-    // Pass 1: v7/finance/quote (market cap, P/E, P/B, EPS, dividend)
+    // 2a. v7/finance/quote — market cap, P/E, EPS, dividends
     try {
-      const q7Res = await fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`,
-        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(5000) }
-      );
-      if (q7Res.ok) {
-        const q7 = (await q7Res.json())?.quoteResponse?.result?.[0] || {};
+      const r = await fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`, 6000);
+      if (r) {
+        const q7 = (await r.json())?.quoteResponse?.result?.[0] || {};
         if (q7.symbol) {
+          yfFetchedAny = true;
           yfFund = {
-            marketCapCr:   q7.marketCap                 ? +(q7.marketCap / 1e7).toFixed(0)       : null,
-            pe:            q7.trailingPE                ? +q7.trailingPE.toFixed(2)               : null,
-            forwardPE:     q7.forwardPE                 ? +q7.forwardPE.toFixed(2)                : null,
-            eps:           q7.epsTrailingTwelveMonths   ? +q7.epsTrailingTwelveMonths.toFixed(2)  : null,
-            pbRatio:       q7.priceToBook               ? +q7.priceToBook.toFixed(2)              : null,
-            bookValue:     q7.bookValue                 ? +q7.bookValue.toFixed(2)                : null,
-            dividendYield: q7.dividendYield             || null,
-            dividendRate:  q7.trailingAnnualDividendRate|| null,
+            marketCapCr:   q7.marketCap                  ? +(q7.marketCap / 1e7).toFixed(0)      : null,
+            pe:            q7.trailingPE                  ? +q7.trailingPE.toFixed(2)              : null,
+            forwardPE:     q7.forwardPE                   ? +q7.forwardPE.toFixed(2)               : null,
+            eps:           q7.epsTrailingTwelveMonths     ? +q7.epsTrailingTwelveMonths.toFixed(2) : null,
+            pbRatio:       q7.priceToBook                 ? +q7.priceToBook.toFixed(2)             : null,
+            bookValue:     q7.bookValue                   ? +q7.bookValue.toFixed(2)               : null,
+            dividendYield: q7.dividendYield               || null,
+            dividendRate:  q7.trailingAnnualDividendRate  || null,
           };
-          Object.keys(yfFund).forEach(k => { if (yfFund[k] == null) delete yfFund[k]; });
+          pruneNulls(yfFund);
         }
       }
-    } catch (_) { /* v7/quote best-effort */ }
+    } catch (_) {}
 
-    // Pass 2: v10/quoteSummary (ROE, margins, D/E, growth, analyst targets)
+    // 2b. v10/quoteSummary — ROE, margins, D/E, growth, analyst targets
     try {
-      const qsRes = await fetch(
-        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`,
-        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(5000) }
-      );
-      if (qsRes.ok) {
-        const sr = (await qsRes.json())?.quoteSummary?.result?.[0];
+      const modules = 'financialData,defaultKeyStatistics,summaryDetail';
+      const r = await fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=${modules}`, 7000);
+      if (r) {
+        const sr = (await r.json())?.quoteSummary?.result?.[0];
         if (sr) {
+          yfFetchedAny = true;
           const fd = sr.financialData        || {};
           const ks = sr.defaultKeyStatistics || {};
           const sd = sr.summaryDetail        || {};
-          const rv = v => (v && v.raw != null) ? v.raw : null;
-          const pc = v => rv(v) != null ? +(rv(v) * 100).toFixed(2) : null;
+          const rv  = v => (v && v.raw != null) ? v.raw : null;
+          const pct = v => rv(v) != null ? +(rv(v) * 100).toFixed(2) : null;
+          const fix = v => rv(v) != null ? +rv(v).toFixed(2) : null;
           const qsExtra = {
-            roe:             pc(fd.returnOnEquity),
-            operatingMargin: pc(fd.operatingMargins),
-            debtToEquity:    rv(fd.debtToEquity)     != null ? +rv(fd.debtToEquity).toFixed(2)     : null,
-            revenueGrowth:   pc(fd.revenueGrowth),
-            earningsGrowth:  pc(fd.earningsGrowth),
-            targetPrice:     rv(fd.targetMeanPrice)  != null ? +rv(fd.targetMeanPrice).toFixed(2)  : null,
+            roe:             pct(fd.returnOnEquity),
+            operatingMargin: pct(fd.operatingMargins),
+            debtToEquity:    fix(fd.debtToEquity),
+            revenueGrowth:   pct(fd.revenueGrowth),
+            earningsGrowth:  pct(fd.earningsGrowth),
+            targetPrice:     fix(fd.targetMeanPrice),
             analystCount:    rv(fd.numberOfAnalystOpinions),
-            recommendation:  fd.recommendationKey    || null,
-            // Valuation fallbacks if v7 missed them
-            pe:              rv(sd.trailingPE)       != null ? +rv(sd.trailingPE).toFixed(2)       : null,
-            forwardPE:       rv(sd.forwardPE)        != null ? +rv(sd.forwardPE).toFixed(2)        : null,
-            marketCapCr:     rv(sd.marketCap)        != null ? +(rv(sd.marketCap)/1e7).toFixed(0)  : null,
-            eps:             rv(ks.trailingEps)      != null ? +rv(ks.trailingEps).toFixed(2)      : null,
-            pbRatio:         rv(ks.priceToBook)      != null ? +rv(ks.priceToBook).toFixed(2)      : null,
+            recommendation:  fd.recommendationKey || null,
+            pe:              fix(sd.trailingPE),
+            forwardPE:       fix(sd.forwardPE),
+            marketCapCr:     rv(sd.marketCap) != null ? +(rv(sd.marketCap)/1e7).toFixed(0) : null,
+            eps:             fix(ks.trailingEps),
+            pbRatio:         fix(ks.priceToBook),
           };
-          Object.keys(qsExtra).forEach(k => { if (qsExtra[k] == null) delete qsExtra[k]; });
-          yfFund = { ...yfFund, ...qsExtra }; // quoteSummary fills any gaps left by v7
+          pruneNulls(qsExtra);
+          yfFund = { ...yfFund, ...qsExtra };
         }
       }
-    } catch (_) { /* quoteSummary best-effort */ }
+    } catch (_) {}
 
-    // Final merge: manually-passed fund (fundamentals.json) always takes priority
+    // 2c. 52w range from chart meta (always available)
+    if (meta.fiftyTwoWeekHigh) yfFund.high52w = meta.fiftyTwoWeekHigh;
+    if (meta.fiftyTwoWeekLow)  yfFund.low52w  = meta.fiftyTwoWeekLow;
+
+    // Manual fundamentals.json wins over Yahoo Finance
     fund = { ...yfFund, ...fund };
 
-    // ── 2. Technical indicators ───────────────────────────────────────────
+    // ── 3. Technical indicators ──────────────────────────────────────────────
     const price      = closes.at(-1);
     const changePct  = ((price - closes.at(-2)) / closes.at(-2)) * 100;
     const sma20      = avg(closes.slice(-20));
     const sma50      = closes.length >= 50 ? avg(closes.slice(-50)) : null;
     const macd       = ema(closes, 12) - ema(closes, 26);
-    const macdSignal = ema(closes.slice(-35).map((_, i, a) => {
-      if (i < 12) return null;
-      return ema(a.slice(0, i+1), 12) - ema(a.slice(0, i+1), 26);
-    }).filter(x => x !== null), 9);
+    const macdSignal = ema(
+      closes.slice(-35).map((_, i, a) => {
+        if (i < 12) return null;
+        return ema(a.slice(0, i+1), 12) - ema(a.slice(0, i+1), 26);
+      }).filter(x => x !== null), 9
+    );
     const rsi       = calcRSI(closes);
     const high52w   = Math.max(...closes);
     const low52w    = Math.min(...closes);
@@ -180,7 +204,7 @@ export default async function handler(req) {
     const bbLower   = sma20 - 2 * stddev20;
     const bbPct     = stddev20 > 0 ? ((price - bbLower) / (bbUpper - bbLower)) * 100 : 50;
 
-    // ── 3. Signal score ───────────────────────────────────────────────────
+    // ── 4. Signal score ──────────────────────────────────────────────────────
     const scores = {
       trend:    price > sma20 && (!sma50 || price > sma50) ? 2 : price > sma20 ? 1 : sma50 && price > sma50 ? -1 : -2,
       momentum: rsi > 55 && rsi < 70 ? 2 : rsi > 70 ? -1 : rsi < 35 ? 2 : rsi < 45 ? -1 : 0,
@@ -193,29 +217,35 @@ export default async function handler(req) {
     const techScore     = Object.values(scores).reduce((a, b) => a + b, 0);
     const techScoreNorm = +((techScore + 14) / 28 * 10).toFixed(1);
 
-    // ── 4. EMA series for chart overlays ─────────────────────────────────
+    // ── 5. EMA series ────────────────────────────────────────────────────────
     const ema20Series  = emaSeriesArr(closes, 20);
     const ema50Series  = closes.length >= 50  ? emaSeriesArr(closes, 50)  : null;
     const ema200Series = closes.length >= 200 ? emaSeriesArr(closes, 200) : null;
 
-    // ── 5. Claude prompt ──────────────────────────────────────────────────
+    // ── 6. Claude prompt ─────────────────────────────────────────────────────
     const smaLine = (v, l) => v != null
       ? `- ${l}: ₹${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
       : '';
 
-    const fundLines = [
+    const knownFundLines = [
       fund.pe             != null ? `- P/E: ${fund.pe}x${fund.forwardPE ? ` | Fwd P/E: ${fund.forwardPE}x` : ''}` : '',
-      fund.roe            != null ? `- ROE: ${fund.roe}% | ROCE: ${fund.roce ?? 'N/A'}%` : '',
-      fund.revenueGrowth  != null ? `- Revenue Growth: +${fund.revenueGrowth}% YoY | Earnings Growth: ${fund.earningsGrowth != null ? '+'+fund.earningsGrowth+'%' : 'N/A'}` : '',
+      fund.roe            != null ? `- ROE: ${fund.roe}%` + (fund.roce != null ? ` | ROCE: ${fund.roce}%` : '') : '',
+      fund.revenueGrowth  != null ? `- Revenue Growth: +${fund.revenueGrowth}% YoY` + (fund.earningsGrowth != null ? ` | Earnings Growth: +${fund.earningsGrowth}%` : '') : '',
       fund.operatingMargin!= null ? `- Operating Margin: ${fund.operatingMargin}%` : '',
       fund.debtToEquity   != null ? `- D/E: ${fund.debtToEquity}x` : '',
       fund.targetPrice    != null ? `- Analyst Target: ₹${fund.targetPrice} (${fund.analystCount ?? '?'} analysts, consensus: ${(fund.recommendation||'').toUpperCase()})` : '',
     ].filter(Boolean).join('\n');
 
+    const fundDataStatus = yfFetchedAny
+      ? (knownFundLines
+          ? `Fetched from Yahoo Finance:\n${knownFundLines}\nFill remaining null fields in knownFundamentals from your training data.`
+          : `Yahoo Finance returned no fundamental data for ${symbol}. Fill ALL knownFundamentals fields from your training data.`)
+      : `Yahoo Finance was unreachable. Fill ALL knownFundamentals fields from your training knowledge of ${name} (${symbol}). This is a well-known Indian company — provide realistic estimates based on its most recent financial year. Do NOT leave fields null unless truly not applicable.`;
+
     const prompt = `You are a senior equity analyst covering Indian markets.
 Sector expertise: ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
 
-Analyse ${name} (NSE: ${symbol}) — signal must reflect CONFLUENCE of multiple factors.
+Analyse ${name} (NSE: ${symbol}).
 
 ━━━ TECHNICAL DATA ━━━
 - Price: ₹${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today)
@@ -231,13 +261,13 @@ ${smaLine(sma50, '50-day SMA')}
 ━━━ SIGNAL SCORE: ${techScoreNorm}/10 ━━━
 → ${techScore >= 6 ? 'Strong bullish' : techScore >= 2 ? 'Mild bullish' : techScore >= -2 ? 'Neutral/mixed' : techScore >= -6 ? 'Mild bearish' : 'Strong bearish'}
 
-━━━ FUNDAMENTALS (from company filings) ━━━
-${fundLines || '(not available in database yet)'}
+━━━ FUNDAMENTALS ━━━
+${fundDataStatus}
 
 Reply ONLY with valid JSON, no markdown:
-{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences referencing score, key technicals and fundamentals","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook with specific trigger","keyRisk":"biggest risk to this view"}`;
+{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook","keyRisk":"biggest risk","knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}`;
 
-    // ── 6. Call Claude ─────────────────────────────────────────────────────
+    // ── 7. Claude ────────────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -247,10 +277,10 @@ Reply ONLY with valid JSON, no markdown:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 700,
+        max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       }),
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(25000)
     });
 
     if (!claudeRes.ok) return reply({ error: 'Claude: ' + (await claudeRes.text()).slice(0, 200) }, 500, cors);
@@ -258,6 +288,16 @@ Reply ONLY with valid JSON, no markdown:
     const cd       = await claudeRes.json();
     const raw      = cd.content[0].text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     const analysis = JSON.parse(raw);
+
+    // Merge Claude's training knowledge into gaps
+    // Priority: manual fundDB > Yahoo Finance > Claude training data
+    if (analysis.knownFundamentals) {
+      const cf = analysis.knownFundamentals;
+      Object.keys(cf).forEach(k => {
+        if (cf[k] != null && fund[k] == null) fund[k] = cf[k];
+      });
+      delete analysis.knownFundamentals;
+    }
 
     return reply({
       symbol: symbol.toUpperCase(), name,
@@ -271,11 +311,9 @@ Reply ONLY with valid JSON, no markdown:
         volRatio: +volRatio.toFixed(2), techScore: techScoreNorm, scores,
       },
       analysis,
-      fundamentals: fund,   // merged Yahoo Finance + manual data
+      fundamentals: fund,
       ohlcv: rows,
-      ema20Series,
-      ema50Series,
-      ema200Series,
+      ema20Series, ema50Series, ema200Series,
       fetchedAt: new Date().toISOString()
     }, 200, cors);
 
@@ -290,6 +328,7 @@ const reply = (data, status, headers) =>
     headers: { 'Content-Type': 'application/json', ...headers }
   });
 
+function pruneNulls(obj) { Object.keys(obj).forEach(k => { if (obj[k] == null) delete obj[k]; }); }
 function avg(a) { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((s,x)=>s+x,0)/v.length : 0; }
 function ema(c, p) { if (!c.length || p > c.length) return avg(c); const k=2/(p+1); let e=avg(c.slice(0,p)); for(let i=p;i<c.length;i++) e=c[i]*k+e*(1-k); return e; }
 function calcRSI(c, p=14) {
@@ -298,7 +337,6 @@ function calcRSI(c, p=14) {
   for (let i=c.length-p; i<c.length; i++) { const d=c[i]-c[i-1]; if(d>0) g+=d; else l-=d; }
   return 100-100/(1+(g/p)/((l/p)||0.001));
 }
-// Returns full EMA series aligned with closes array; values before period are null
 function emaSeriesArr(c, p) {
   const k = 2/(p+1), res = new Array(c.length).fill(null);
   if (c.length < p) return res;
