@@ -1506,8 +1506,9 @@ function renderScreenerMetrics(record) {
   const normalizeYield = v => {
     if (v == null) return null;
     const n = Number(v); if (Number.isNaN(n)) return null;
-    if (n > 20) return n / 100;
-    return n > 1 ? n : n * 100;
+    if (n > 20)   return +(n / 100).toFixed(2);   // e.g. 80 → 0.8%
+    if (n > 0.20) return +n.toFixed(2);            // e.g. 0.8 or 1.5 → already %
+    return +(n * 100).toFixed(2);                  // e.g. 0.008 (Yahoo) → 0.8%
   };
   const divYieldPct = normalizeYield(fun.dividendYield);
   const cells=[

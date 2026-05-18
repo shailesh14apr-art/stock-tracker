@@ -265,7 +265,9 @@ ${smaLine(sma50, '50-day SMA')}
 ${fundDataStatus}
 
 Reply ONLY with valid JSON, no markdown:
-{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook","keyRisk":"biggest risk","knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}`;
+{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook","keyRisk":"biggest risk","knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
+
+IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching Yahoo Finance format — 0.008 means 0.8% yield, NOT the number 0.8. roe, roce, operatingMargin, revenueGrowth, earningsGrowth are percentage values (e.g. 21.5 means 21.5%). debtToEquity is a ratio (e.g. 7.8 means 7.8x).`;
 
     // ── 7. Claude ────────────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
