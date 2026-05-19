@@ -696,6 +696,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
@@ -716,6 +717,7 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 const _auth           = firebase.auth();
 const _db             = firebase.database();
+const _analytics      = firebase.analytics();
 const _googleProvider = new firebase.auth.GoogleAuthProvider();
 _googleProvider.setCustomParameters({ prompt: 'select_account' });
 let _appInited           = false;
@@ -785,6 +787,7 @@ _auth.onAuthStateChanged(user => {
 function showHub() { document.getElementById('hub').style.display = 'block'; }
 
 async function showApp() {
+  logEvent('app_opened',{source:'hub'});
   document.getElementById('hub').style.display = 'none';
   if (!_appInited) {
     _appInited = true;
@@ -1234,6 +1237,7 @@ async function sendChatMessage(prefill) {
   const panel = document.getElementById('chat-sug-panel');
   if (panel) panel.classList.remove('open');
 
+  logEvent('chat_message',{symbol:currentRecord?.symbol||'',message_length:text.length});
   _chatMsgs.push({ role:'user', content:text, ts:Date.now() });
   _chatLoading = true;
   renderChatMessages();
@@ -1433,7 +1437,7 @@ async function triggerAnalysis(sym) {
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
-    storeAnalysis(sym,record); renderSidebar(); renderAnalysis(record);
+    storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar(); renderAnalysis(record);
   } catch(err) {
     renderError(sym,err.message);
     const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
@@ -1441,12 +1445,12 @@ async function triggerAnalysis(sym) {
 }
 function addToWatchlist(sym) {
   const wl=getWatchlist();
-  if(!wl.includes(sym)){ wl.push(sym); saveWatchlist(wl); }
+  if(!wl.includes(sym)){ wl.push(sym); saveWatchlist(wl); logEvent('watchlist_add',{symbol:sym}); }
   closeModal(); renderSidebar(); triggerAnalysis(sym);
 }
 function removeFromWatchlist(sym) {
   const wl=getWatchlist(), idx=wl.indexOf(sym);
-  if(idx>-1){wl.splice(idx,1);saveWatchlist(wl);const s=getStoredData();delete s[sym];localStorage.setItem('stockData',JSON.stringify(s));}
+  if(idx>-1){wl.splice(idx,1);saveWatchlist(wl);logEvent('watchlist_remove',{symbol:sym});const s=getStoredData();delete s[sym];localStorage.setItem('stockData',JSON.stringify(s));}
   if(activeStock===sym){activeStock=null;document.getElementById('main-content').innerHTML='';}
   renderSidebar();
 }
@@ -1455,6 +1459,7 @@ function removeFromWatchlist(sym) {
 function setTimeframe(tf) {
   currentTF=tf; document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('tf-active'));
   document.querySelector(`.tf-btn[data-tf="${tf}"]`)?.classList.add('tf-active');
+  logEvent('chart_timeframe',{timeframe:tf,symbol:activeStock||''});
   if(currentRecord?.ohlcv?.length) renderPriceChart(currentRecord,tf);
 }
 function renderPriceChart(record,tf) {
@@ -1702,6 +1707,10 @@ function toggleTheme(){
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return iso||'—';}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
+// ── FIREBASE ANALYTICS — CUSTOM EVENTS ──────────────────────────────────────
+function logEvent(name, params) {
+  try { if (_analytics) _analytics.logEvent(name, params || {}); } catch(_) {}
+}
 // ── INIT ───────────────────────────────────────────────────────────────────────
 const _t = localStorage.getItem('theme') || 'dark';
 document.documentElement.setAttribute('data-theme', _t);
