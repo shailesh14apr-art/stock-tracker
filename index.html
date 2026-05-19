@@ -612,7 +612,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <!-- Hero -->
   <section class="lp-hero">
     <div class="lp-hero-left">
-      <div class="lp-hero-tag">🤖 Powered by Claude Sonnet AI</div>
+      <div class="lp-hero-tag" title="Claude Sonnet — Anthropic's flagship financial-reasoning model">🤖 Powered by Claude Sonnet AI</div>
       <h1>AI Stock Analysis<br>for&nbsp;<span class="accent">Indian Equities</span></h1>
       <p class="lp-hero-sub">Get instant Buy / Hold / Review signals on 500+ NSE stocks. Live candlestick charts, key metrics, and an AI financial expert — all in one place.</p>
       <div class="lp-cta-row">
@@ -769,150 +769,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 </div>
 <!-- ── END LANDING PAGE ──────────────────────────────────────────────────────── -->
 
-<!-- ── LANDING PAGE (public, indexed by Google) ─────────────────────────── -->
-<div id="landing-public">
-
-  <!-- Nav -->
-  <nav class="lp-nav">
-    <a class="lp-logo" href="/">
-      <div class="lp-logo-icon">📈</div>
-      <span class="lp-logo-text">Bazaar<span>Lens</span></span>
-      <span class="lp-logo-badge">Beta</span>
-    </a>
-    <div class="lp-nav-right">
-      <button class="lp-btn-ghost" onclick="showLoginFromLanding('signin')">Sign In</button>
-      <button class="lp-btn-solid" onclick="showLoginFromLanding('signup')">Get Started →</button>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <section class="lp-hero">
-    <div class="lp-hero-tag"><span class="lp-hero-dot"></span> Powered by Claude Sonnet AI</div>
-    <h1>AI Stock Analysis for<br><span>Indian Markets</span></h1>
-    <p class="lp-hero-sub">Real-time NSE signals, candlestick charts with EMA overlays, and expert AI analysis for your personal Nifty 500 watchlist — all powered by Claude Sonnet.</p>
-    <div class="lp-hero-ctas">
-      <button class="lp-cta-primary" onclick="showLoginFromLanding('signup')">
-        ⚡ Start Analysing Free
-      </button>
-      <button class="lp-cta-secondary" onclick="document.getElementById('lp-how')?.scrollIntoView({ behavior: 'smooth', block: 'start' });">
-        See How It Works ↓
-      </button>
-    </div>
-    <div class="lp-trust">
-      <div class="lp-trust-item">✓ <span>Nifty 500</span> stocks covered</div>
-      <div class="lp-trust-item">✓ <span>~20 second</span> analysis</div>
-      <div class="lp-trust-item">✓ <span>Free</span> to use</div>
-      <div class="lp-trust-item">✓ No credit card needed</div>
-    </div>
-  </section>
-
-  <!-- Stats bar -->
-  <div class="lp-stats">
-    <div class="lp-stats-inner">
-      <div class="lp-stat"><div class="lp-stat-num">500+</div><div class="lp-stat-lbl">NSE Stocks</div></div>
-      <div class="lp-stat"><div class="lp-stat-num">~20s</div><div class="lp-stat-lbl">Analysis Time</div></div>
-      <div class="lp-stat"><div class="lp-stat-num">3</div><div class="lp-stat-lbl">AI Signals</div></div>
-      <div class="lp-stat"><div class="lp-stat-num">1yr</div><div class="lp-stat-lbl">Price History</div></div>
-    </div>
-  </div>
-
-  <!-- Features -->
-  <section class="lp-section">
-    <div class="lp-section-label">What you get</div>
-    <h2>Everything you need to<br>analyse Indian equities</h2>
-    <p class="lp-section-sub">BazaarLens combines live NSE price data, technical indicators, and Claude Sonnet AI into a single dashboard — built for retail investors who want clarity, not noise.</p>
-    <div class="lp-features">
-      <div class="lp-feat">
-        <div class="lp-feat-icon">🤖</div>
-        <h3>AI Buy / Hold / Review Signals</h3>
-        <p>Claude Sonnet analyses price action, technicals and fundamentals to give a clear, reasoned signal for every stock — not just a number, but a full explanation.</p>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon">📡</div>
-        <h3>Live NSE Price Data</h3>
-        <p>Real-time prices, 52-week range, day change and volume fetched directly from Yahoo Finance for any NSE-listed stock.</p>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon">📈</div>
-        <h3>Candlestick Charts + EMA</h3>
-        <p>Interactive daily candlestick charts with EMA 20, 50 and 200 overlays across 1W, 1M, 3M, 6M and 1Y timeframes.</p>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon">💬</div>
-        <h3>AI Financial Expert Chat</h3>
-        <p>Ask anything about a stock — "What's the stop-loss?", "Is the valuation attractive?" — and get answers grounded in the actual data on screen.</p>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon">📊</div>
-        <h3>Key Fundamentals Grid</h3>
-        <p>P/E, ROE, ROCE, D/E, revenue growth, operating margins and analyst consensus — all in one scannable grid per stock.</p>
-      </div>
-      <div class="lp-feat">
-        <div class="lp-feat-icon">🛡</div>
-        <h3>Support &amp; Resistance Levels</h3>
-        <p>AI-computed support and resistance levels with plain-English reasoning — so you know where the key price zones are and why they matter.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- How it works -->
-  <section class="lp-section" id="lp-how" style="padding-top:0;">
-    <div class="lp-section-label">How it works</div>
-    <h2>From watchlist to AI signal<br>in three steps</h2>
-    <p class="lp-section-sub">No complex setup. Add any NSE stock, hit Analyse, and BazaarLens does the rest.</p>
-    <div class="lp-steps">
-      <div class="lp-step">
-        <div class="lp-step-num">1</div>
-        <h3>Build your watchlist</h3>
-        <p>Search from 500+ Nifty 500 stocks or type any NSE symbol. Your watchlist is saved and synced across devices.</p>
-      </div>
-      <div class="lp-step">
-        <div class="lp-step-num">2</div>
-        <h3>AI fetches &amp; analyses</h3>
-        <p>BazaarLens fetches live NSE price history, computes RSI, MACD, EMA and Bollinger Bands, then passes everything to Claude Sonnet.</p>
-      </div>
-      <div class="lp-step">
-        <div class="lp-step-num">3</div>
-        <h3>Get a clear signal</h3>
-        <p>Receive a Buy More, Hold or Review signal with a confidence level, technical summary, support/resistance levels and short-term outlook.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Powered by -->
-  <div class="lp-powered">
-    <div class="lp-powered-inner">
-      <div class="lp-powered-item">Built with <span class="lp-powered-badge blue">Claude Sonnet by Anthropic</span></div>
-      <div class="lp-powered-item">Data from <span class="lp-powered-badge green">Yahoo Finance · NSE</span></div>
-      <div class="lp-powered-item">Auth by <span class="lp-powered-badge purple">Firebase · Google</span></div>
-    </div>
-  </div>
-
-  <!-- CTA -->
-  <section class="lp-cta-section">
-    <h2>Start analysing your portfolio today</h2>
-    <p>Free to use. No credit card. Works for any NSE-listed stock — from Nifty 50 blue chips to mid-cap growth stories.</p>
-    <button class="lp-cta-big" onclick="showLoginFromLanding('signup')">Create Free Account →</button>
-  </section>
-
-  <!-- Footer -->
-  <footer class="lp-footer">
-    <div class="lp-footer-logo">📈 Bazaar<span>Lens</span></div>
-    <div class="lp-footer-links">
-      <a href="#lp-how">How it works</a>
-      <a href="#" onclick="showLoginFromLanding('signin');return false;">Sign In</a>
-    </div>
-    <div class="lp-footer-disc">⚠️ BazaarLens is for informational purposes only and does not constitute investment advice. Always consult a SEBI-registered investment advisor before making investment decisions. Past performance is not indicative of future results.</div>
-  </footer>
-
-</div><!-- end #landing -->
 
 <!-- ── LOGIN OVERLAY — SPLIT SCREEN ─────────────────────────────────────── -->
 <div id="login-overlay" class="hidden">
   <div class="lo-left">
     <div class="lo-brand">
       <div class="lo-brand-icon">📈</div>
-      <div><h1>BazaarLens</h1><p>AI-powered weekly analysis for Indian equities</p></div>
+      <div><h2 style="font-size:26px;font-weight:700;color:#f1f5f9;letter-spacing:-.4px;">BazaarLens</h2><p>AI-powered weekly analysis for Indian equities</p></div>
     </div>
     <div class="lo-pills">
       <div class="lo-pill">🤖 Claude Sonnet AI</div>
@@ -973,10 +836,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </button>
       <div class="lo-auth-error" id="lo-auth-error"></div>
       <div class="lo-redirect-wrap" id="lo-redirect-wrap">
-        <a href="#" onclick="handleGoogleRedirect(event)">🔄 Try signing in via redirect instead</a>
+        <button onclick="handleGoogleRedirect(event)" style="font-size:12px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:6px 12px;cursor:pointer;font-family:inherit;">🔄 Try signing in via redirect instead</button>
       </div>
       <div class="lo-domain-hint" id="lo-domain-hint"></div>
-      <div class="lo-signup-row">Don't have an account?<a href="#" onclick="loSwitchToSignup(event)">Get started →</a></div>
+      <div class="lo-signup-row">Don't have an account?<button onclick="loSwitchToSignup(event)" style="background:none;border:none;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:3px;">Get started →</button></div>
       </div>
     </div>
   </div>
@@ -988,7 +851,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="hub-brand"><span>📈</span> BazaarLens<span class="hub-brand-badge">Beta</span></div>
     <div class="hub-header-right">
       <div onclick="showAccount('hub')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" title="Account settings">
-        <img class="hub-avatar-img" id="hub-avatar" src="" alt="">
+        <img class="hub-avatar-img" id="hub-avatar" src="" alt="Profile photo">
         <div class="hub-avatar-fallback" id="hub-fallback">U</div>
         <span class="hub-user-name" id="hub-user-name"></span>
       </div>
@@ -997,7 +860,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   </div>
   <div class="hub-body">
     <div class="hub-welcome">
-      <h1>Good <span id="hub-time-greet">day</span>, <span id="hub-name">there</span> 👋</h1>
+      <h2 style="font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.5px;">Good <span id="hub-time-greet">day</span>, <span id="hub-name">there</span> 👋</h2>
       <p>Your AI-powered market intelligence suite for Indian equities</p>
     </div>
     <div class="hub-grid">
@@ -1058,7 +921,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="acct-card">
       <div class="acct-card-title">Profile</div>
       <div class="acct-profile">
-        <img class="acct-avatar-img" id="acct-avatar-img" src="" alt="">
+        <img class="acct-avatar-img" id="acct-avatar-img" src="" alt="Profile photo">
         <div class="acct-avatar-fallback" id="acct-avatar-fallback">U</div>
         <div class="acct-profile-info">
           <div class="acct-display-name" id="acct-display-name">—</div>
@@ -1069,9 +932,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     </div>
     <div class="acct-card" id="acct-pw-card" style="display:none;">
       <div class="acct-card-title">Change Password</div>
-      <div class="acct-field"><label>Current password</label><input type="password" id="acct-current-pw" placeholder="Enter current password" autocomplete="current-password"/></div>
-      <div class="acct-field"><label>New password</label><input type="password" id="acct-new-pw" placeholder="At least 6 characters" autocomplete="new-password"/></div>
-      <div class="acct-field"><label>Confirm new password</label><input type="password" id="acct-confirm-pw" placeholder="Repeat new password" autocomplete="new-password"/></div>
+      <div class="acct-field"><label for="acct-current-pw">Current password</label><input type="password" id="acct-current-pw" placeholder="Enter current password" autocomplete="current-password"/></div>
+      <div class="acct-field"><label for="acct-new-pw">New password</label><input type="password" id="acct-new-pw" placeholder="At least 6 characters" autocomplete="new-password"/></div>
+      <div class="acct-field"><label for="acct-confirm-pw">Confirm new password</label><input type="password" id="acct-confirm-pw" placeholder="Repeat new password" autocomplete="new-password"/></div>
       <button class="acct-pw-btn" onclick="changePassword()">Update Password</button>
       <div class="acct-pw-msg" id="acct-pw-msg"></div>
     </div>
@@ -1086,7 +949,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <aside id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-header-row">
-      <div><h1>📈 BazaarLens</h1><p>AI-powered weekly analysis</p></div>
+      <div><h2 style="font-size:16px;font-weight:700;letter-spacing:-.3px;">📈 BazaarLens</h2><p>AI-powered weekly analysis</p></div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="theme-toggle" onclick="showHub()" title="Back to home">🏠</button>
         <button class="theme-toggle" onclick="showAccount('app')" title="Account settings">👤</button>
@@ -1165,13 +1028,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <script>
 // ── LANDING PAGE ─────────────────────────────────────────────────────────────
 function showLanding() {
-  document.getElementById('landing').classList.add('visible');
+  document.getElementById('landing').style.display = 'block';
   document.getElementById('login-overlay').classList.add('hidden');
   // Replace history state so back-button from login returns here
   try { history.replaceState({ bl_page: 'landing' }, '', '/'); } catch(_) {}
 }
 function hideLanding() {
-  document.getElementById('landing').classList.remove('visible');
+  document.getElementById('landing').style.display = 'none';
 }
 function showLoginFromLanding(mode) {
   hideLanding();
@@ -1193,7 +1056,7 @@ window.addEventListener('popstate', function(e) {
   if (!e.state || e.state.bl_page === 'landing') {
     if (loginOv && !loginOv.classList.contains('hidden') && !_currentUser) {
       loginOv.classList.add('hidden');
-      if (landing) landing.classList.add('visible');
+      if (landing) landing.style.display = 'block';
     }
   }
 });
@@ -1327,7 +1190,7 @@ function loResetLoginForm() {
   if (p)  p.textContent  = 'Sign in to your watchlist';
   const label = document.getElementById('lo-signin-label');
   if (label) label.textContent = 'Sign In';
-  if (row) row.innerHTML = 'Don\'t have an account?<a href="#" onclick="loSwitchToSignup(event)"> Get started →</a>';
+  if (row) row.innerHTML = 'Don\'t have an account?<button onclick="loSwitchToSignup(event)" style="background:none;border:none;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:3px;"> Get started →</button>';
   const rw = document.getElementById('lo-redirect-wrap'), dh = document.getElementById('lo-domain-hint');
   if (rw) rw.style.display = 'none';
   if (dh) dh.style.display = 'none';
@@ -1442,14 +1305,14 @@ function loSwitchToSignup(e) {
   document.querySelector('.lo-card-head h2').textContent = 'Create account';
   document.querySelector('.lo-card-head p').textContent  = 'Get started with BazaarLens';
   document.getElementById('lo-signin-label').textContent = 'Create Account';
-  document.querySelector('.lo-signup-row').innerHTML = 'Already have an account?<a href="#" onclick="loSwitchToSignin(event)"> Sign in →</a>';
+  document.querySelector('.lo-signup-row').innerHTML = 'Already have an account?<button onclick="loSwitchToSignin(event)" style="background:none;border:none;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:3px;"> Sign in →</button>';
 }
 function loSwitchToSignin(e) {
   e.preventDefault(); loClearError();
   document.querySelector('.lo-card-head h2').textContent = 'Welcome back';
   document.querySelector('.lo-card-head p').textContent  = 'Sign in to your watchlist';
   document.getElementById('lo-signin-label').textContent = 'Sign In';
-  document.querySelector('.lo-signup-row').innerHTML = 'Don\'t have an account?<a href="#" onclick="loSwitchToSignup(event)"> Get started →</a>';
+  document.querySelector('.lo-signup-row').innerHTML = 'Don\'t have an account?<button onclick="loSwitchToSignup(event)" style="background:none;border:none;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:3px;"> Get started →</button>';
 }
 function handleSignOut() {
   _appInited = false; _currentUser = null;
@@ -1838,7 +1701,9 @@ function renderSidebar() {
   const wl=getWatchlist(), stored=getStoredData();
   let latest=null;
   Object.values(stored).forEach(d=>{if(d?.lastUpdated&&(!latest||d.lastUpdated>latest))latest=d.lastUpdated;});
-  document.getElementById('last-updated-bar').textContent = latest?'Last updated: '+fmtDate(latest):'Last updated: —';
+  const lastBar = document.getElementById('last-updated-bar');
+  if (latest) { lastBar.textContent = 'Last updated: ' + fmtDate(latest); lastBar.style.display = ''; }
+  else { lastBar.style.display = 'none'; }
   document.getElementById('watchlist-container').innerHTML = wl.map(sym=>{
     const d=stored[sym], k=KNOWN_STOCKS.find(x=>x.symbol===sym);
     const name=d?.name||k?.name||sym, signal=d?.signal||(d===null?'LOADING':'PENDING');
