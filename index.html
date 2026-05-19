@@ -844,7 +844,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <!-- ── END LANDING PAGE ──────────────────────────────────────────────────────── -->
 
 <!-- ── LANDING PAGE (public, indexed by Google) ─────────────────────────── -->
-<div id="landing">
+<div id="landing-public">
 
   <!-- Nav -->
   <nav class="lp-nav">
@@ -868,7 +868,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="lp-cta-primary" onclick="showLoginFromLanding('signup')">
         ⚡ Start Analysing Free
       </button>
-      <button class="lp-cta-secondary" onclick="(function(){const t=document.getElementById('lp-how');const l=document.getElementById('landing');if(t&&l)l.scrollBy({top:t.getBoundingClientRect().top-64,behavior:'smooth'});})();">
+      <button class="lp-cta-secondary" onclick="document.getElementById('lp-how')?.scrollIntoView({ behavior: 'smooth', block: 'start' });">
         See How It Works ↓
       </button>
     </div>
