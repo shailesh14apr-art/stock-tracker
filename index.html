@@ -868,7 +868,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="lp-cta-primary" onclick="showLoginFromLanding('signup')">
         ⚡ Start Analysing Free
       </button>
-      <button class="lp-cta-secondary" onclick="document.getElementById('lp-how').scrollIntoView({behavior:'smooth'})">
+      <button class="lp-cta-secondary" onclick="(function(){const t=document.getElementById('lp-how');const l=document.getElementById('landing');if(t&&l)l.scrollTo({top:t.offsetTop-64,behavior:'smooth'});})();">
         See How It Works ↓
       </button>
     </div>
@@ -1241,12 +1241,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 function showLanding() {
   document.getElementById('landing').classList.add('visible');
   document.getElementById('login-overlay').classList.add('hidden');
+  // Replace history state so back-button from login returns here
+  try { history.replaceState({ bl_page: 'landing' }, '', '/'); } catch(_) {}
 }
 function hideLanding() {
   document.getElementById('landing').classList.remove('visible');
 }
 function showLoginFromLanding(mode) {
   hideLanding();
+  // Push history entry — pressing back will fire popstate and restore landing
+  try { history.pushState({ bl_page: 'login' }, '', '/'); } catch(_) {}
   const overlay = document.getElementById('login-overlay');
   overlay.classList.remove('hidden', 'fade-out');
   if (mode === 'signup') {
@@ -1255,6 +1259,18 @@ function showLoginFromLanding(mode) {
     loSwitchToSignin({ preventDefault: () => {} });
   }
 }
+// Handle browser back button — restore landing page when user presses ←
+window.addEventListener('popstate', function(e) {
+  const landing = document.getElementById('landing');
+  const loginOv = document.getElementById('login-overlay');
+  // If we're going back to the landing state (or no state), show landing
+  if (!e.state || e.state.bl_page === 'landing') {
+    if (loginOv && !loginOv.classList.contains('hidden') && !_currentUser) {
+      loginOv.classList.add('hidden');
+      if (landing) landing.classList.add('visible');
+    }
+  }
+});
 
 // ── FIREBASE CONFIG ────────────────────────────────────────────────────────────
 const FIREBASE_CONFIG = {
