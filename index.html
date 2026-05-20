@@ -1791,10 +1791,27 @@ function renderSidebar() {
     const d=stored[sym], k=KNOWN_STOCKS.find(x=>x.symbol===sym);
     const name=d?.name||k?.name||sym, signal=d?.signal||(d===null?'LOADING':'PENDING');
     const price=d?.price?.current?'₹'+d.price.current.toLocaleString('en-IN'):'—';
-    const upside=d?.targets?.average&&d?.price?.current?(((d.targets.average-d.price.current)/d.price.current)*100).toFixed(0)+'% upside':signal==='LOADING'?'Analysing…':'Pending analysis';
+    const upsidePct=d?.targets?.average&&d?.price?.current?((d.targets.average-d.price.current)/d.price.current)*100:null;
+    let upsideText = signal==='LOADING' ? 'Analysing…' : signal==='PENDING' ? 'Pending analysis' : '—';
+    let upsideStyle = signal==='PENDING'||signal==='LOADING' ? 'color:var(--text3)' : '';
+    if (upsidePct != null) {
+      const rounded = upsidePct.toFixed(0);
+      upsideText = signal === 'REVIEW'
+        ? `${rounded}% target upside`
+        : `${rounded}% upside`;
+      if (signal === 'REVIEW') {
+        upsideStyle = 'color:var(--red)';
+      } else if (signal === 'HOLD') {
+        upsideStyle = 'color:var(--amber)';
+      } else if (signal === 'BUY_MORE') {
+        upsideStyle = 'color:var(--green)';
+      } else if (upsidePct < 0) {
+        upsideStyle = 'color:var(--red)';
+      }
+    }
     return `<div class="stock-card${activeStock===sym?' active':''}" onclick="selectStock('${sym}')">
       <div class="stock-card-top"><span class="stock-symbol">${sym}</span><span class="signal-badge signal-${signal}">${signal.replace('_',' ')}</span><button class="remove-btn" onclick="event.stopPropagation();removeFromWatchlist('${sym}')" title="Remove">×</button></div>
-      <div class="stock-card-bottom"><span class="stock-price">${price}</span><span class="stock-upside" style="${signal==='PENDING'||signal==='LOADING'?'color:var(--text3)':''}">${upside}</span></div>
+      <div class="stock-card-bottom"><span class="stock-price">${price}</span><span class="stock-upside" style="${upsideStyle}">${upsideText}</span></div>
       <div class="stock-name">${name}</div></div>`;
   }).join('');
 }
