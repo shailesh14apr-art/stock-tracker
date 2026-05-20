@@ -332,16 +332,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 @media(max-width:580px){.hub-grid{grid-template-columns:1fr;}.hub-card-featured{grid-column:1;}.hub-header{padding:12px 16px;}.hub-welcome h1{font-size:22px;}}
 
 /* ── MARKET INDICES TICKER ───────────────────────────────────────────── */
-.hub-indices-bar{display:flex;align-items:center;gap:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:24px;}
-.hub-index-item{display:flex;align-items:center;gap:10px;}
+.hub-indices-bar{display:flex;align-items:center;gap:20px;padding:0 20px;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+.hub-index-item{display:flex;align-items:baseline;gap:7px;}
 .hub-index-name{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;}
-.hub-index-value{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);}
-.hub-index-change{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:20px;white-space:nowrap;}
-.hub-index-change.pos{background:var(--green-bg);color:var(--green);}
-.hub-index-change.neg{background:var(--red-bg);color:var(--red);}
-.hub-index-divider{width:1px;height:34px;background:var(--border2);flex-shrink:0;}
-.hub-index-updated{margin-left:auto;font-size:10px;color:var(--text3);white-space:nowrap;}
-@media(max-width:580px){.hub-indices-bar{flex-wrap:wrap;gap:14px;}.hub-index-divider{display:none;}.hub-index-updated{width:100%;text-align:right;}}
+.hub-index-value{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);}
+.hub-index-change{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.hub-index-change.pos{color:var(--green);}
+.hub-index-change.neg{color:var(--red);}
+.hub-index-divider{width:1px;height:24px;background:var(--border2);flex-shrink:0;}
+@media(max-width:768px){.hub-indices-bar{display:none;}}
+.hub-indices-mobile{display:none;}
+@media(max-width:768px){
+  .hub-indices-mobile{display:flex;align-items:center;gap:20px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:49px;z-index:9;}
+  .hub-indices-mobile .hub-index-divider{height:18px;}
+}
 
 /* ── ACCOUNT PAGE ─────────────────────────────────────────────────────── */
 #account{position:fixed;inset:0;z-index:600;background:var(--bg);overflow-y:auto;font-family:'Segoe UI',system-ui,sans-serif;display:none;}
@@ -861,20 +865,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div id="hub">
   <div class="hub-header">
     <div class="hub-brand"><span>📈</span> BazaarLens<span class="hub-brand-badge">Beta</span></div>
-    <div class="hub-header-right">
-      <div onclick="showAccount('hub')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" title="Account settings">
-        <img class="hub-avatar-img" id="hub-avatar" src="" alt="Profile photo">
-        <div class="hub-avatar-fallback" id="hub-fallback">U</div>
-        <span class="hub-user-name" id="hub-user-name"></span>
-      </div>
-      <button class="hub-signout" onclick="handleSignOut()">Sign out</button>
-    </div>
-  </div>
-  <div class="hub-body">
-    <div class="hub-welcome">
-      <h2 style="font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.5px;">Good <span id="hub-time-greet">day</span>, <span id="hub-name">there</span> 👋</h2>
-      <p>Your AI-powered market intelligence suite for Indian equities</p>
-    </div>
     <!-- Market Indices Ticker -->
     <div class="hub-indices-bar" id="hub-indices">
       <div class="hub-index-item" id="hub-nifty">
@@ -888,9 +878,35 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span class="hub-index-value">—</span>
         <span class="hub-index-change">—</span>
       </div>
-      <span class="hub-index-updated" id="hub-index-updated">Fetching…</span>
     </div>
-
+    <div class="hub-header-right">
+      <div onclick="showAccount('hub')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" title="Account settings">
+        <img class="hub-avatar-img" id="hub-avatar" src="" alt="Profile photo">
+        <div class="hub-avatar-fallback" id="hub-fallback">U</div>
+        <span class="hub-user-name" id="hub-user-name"></span>
+      </div>
+      <button class="hub-signout" onclick="handleSignOut()">Sign out</button>
+    </div>
+  </div>
+  <!-- Mobile indices bar — hidden on desktop (header shows it there) -->
+  <div class="hub-indices-mobile" id="hub-indices-mobile">
+    <div class="hub-index-item" id="hub-nifty-mob">
+      <span class="hub-index-name">NIFTY 50</span>
+      <span class="hub-index-value">—</span>
+      <span class="hub-index-change">—</span>
+    </div>
+    <div class="hub-index-divider"></div>
+    <div class="hub-index-item" id="hub-sensex-mob">
+      <span class="hub-index-name">SENSEX</span>
+      <span class="hub-index-value">—</span>
+      <span class="hub-index-change">—</span>
+    </div>
+  </div>
+  <div class="hub-body">
+    <div class="hub-welcome">
+      <h2 style="font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.5px;">Good <span id="hub-time-greet">day</span>, <span id="hub-name">there</span> 👋</h2>
+      <p>Your AI-powered market intelligence suite for Indian equities</p>
+    </div>
     <div class="hub-grid">
       <div class="hub-card hub-card-featured" onclick="showApp()">
         <div class="hub-featured-hero">
@@ -1196,14 +1212,9 @@ async function _fetchIndices() {
     const data = await res.json();
     _renderIndex('hub-nifty', data.nifty);
     _renderIndex('hub-sensex', data.sensex);
-    const upd = document.getElementById('hub-index-updated');
-    if (upd && data.fetchedAt) {
-      upd.textContent = 'Updated ' + new Date(data.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    }
-  } catch (_) {
-    const upd = document.getElementById('hub-index-updated');
-    if (upd) upd.textContent = 'Data unavailable';
-  }
+    _renderIndex('hub-nifty-mob', data.nifty);
+    _renderIndex('hub-sensex-mob', data.sensex);
+  } catch (_) {}
 }
 
 function _startIndicesTicker() {
