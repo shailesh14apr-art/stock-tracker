@@ -603,8 +603,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <a href="#lp-features" style="font-size:13px;color:var(--text2);text-decoration:none;font-weight:500;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">Features</a>
           <a href="#lp-how" style="font-size:13px;color:var(--text2);text-decoration:none;font-weight:500;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">How it works</a>
         </nav>
-        <button class="lp-nav-signin" onclick="showLoginOverlay()">Sign In</button>
-        <button class="lp-nav-cta" onclick="showLoginOverlay()">Start for Free →</button>
+        <button class="lp-nav-signin" onclick="showLoginFromLanding('signin')">Sign In</button>
+        <button class="lp-nav-cta" onclick="showLoginFromLanding('signup')">Start for Free →</button>
       </div>
     </div>
   </nav>
@@ -616,7 +616,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <h1>AI Stock Analysis<br>for&nbsp;<span class="accent">Indian Equities</span></h1>
       <p class="lp-hero-sub">Get instant Buy / Hold / Review signals on 500+ NSE stocks. Live candlestick charts, key metrics, and an AI financial expert — all in one place.</p>
       <div class="lp-cta-row">
-        <button class="lp-cta-primary" onclick="showLoginOverlay()">Start for Free →</button>
+        <button class="lp-cta-primary" onclick="showLoginFromLanding('signup')">Start for Free →</button>
         <button class="lp-cta-ghost" onclick="document.getElementById('lp-features').scrollIntoView({behavior:'smooth'})">See features ↓</button>
       </div>
       <p class="lp-hero-disc">⚠️ For informational purposes only. Not SEBI-registered investment advice. Always consult a SEBI-registered advisor before investing.</p>
@@ -747,7 +747,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <section class="lp-cta-band">
     <h2>Start analysing your portfolio today</h2>
     <p>Free to use · No credit card · Sign in with Google and add your first stock in seconds.</p>
-    <button class="lp-cta-primary" onclick="showLoginOverlay()" style="font-size:16px;padding:16px 36px;box-shadow:0 6px 24px rgba(59,130,246,.45);">Start for Free →</button>
+    <button class="lp-cta-primary" onclick="showLoginFromLanding('signup')" style="font-size:16px;padding:16px 36px;box-shadow:0 6px 24px rgba(59,130,246,.45);">Start for Free →</button>
     <p class="lp-pricing-note">Free during beta · No credit card · Paid plans coming for power users</p>
     <div style="margin-top:10px;font-size:12px;color:var(--text3);">⚠️ For informational purposes only. Not SEBI-registered investment advice.</div>
   </section>
