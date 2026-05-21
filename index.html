@@ -618,7 +618,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   top: 0;
   z-index: 10;
   box-shadow: 0 2px 12px rgba(0,0,0,.25);
-  gap: 16px;
+  gap: 12px; /* spacing between Name, Price, and Signal */
 }
 .hdr-v2-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .hdr-v2-name {
@@ -627,7 +627,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 }
 .hdr-v2-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .hdr-v2-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-.hdr-v2-price-col { text-align: right; }
+.hdr-v2-price-col { display:flex; align-items:center; gap:12px; text-align: right; }
+.review-exit-pill {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 6px;
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
 .hdr-v2-price {
   font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums;
   letter-spacing: -.5px; line-height: 1;
