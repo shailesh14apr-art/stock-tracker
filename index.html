@@ -29,6 +29,8 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication","name":"BazaarLens","url":"https://www.bazaarlens.in","description":"AI-powered stock analysis for Indian equities listed on NSE. Get Buy/Hold/Review signals, live candlestick charts and AI financial expert chat powered by Claude Sonnet.","applicationCategory":"FinanceApplication","operatingSystem":"Web","inLanguage":"en-IN","author":{"@type":"Organization","name":"BazaarLens","url":"https://www.bazaarlens.in"},"offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}}
 </script>
+<!-- TradingView Chart Library -->
+<script src="https://s3.tradingview.com/tv.js"></script>
 <style>
 
 /* ── DARK-FIRST DESIGN TOKENS ─────────────────────────────────────────── */
@@ -2196,7 +2198,7 @@ function removeFromWatchlist(sym) {
 }
 
 // ── PRICE CHART ────────────────────────────────────────────────────────────────
-function setTimeframe(tf) {
+/*function setTimeframe(tf) {
   currentTF=tf; document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('tf-active'));
   document.querySelector(`.tf-btn[data-tf="${tf}"]`)?.classList.add('tf-active');
   logEvent('chart_timeframe',{timeframe:tf,symbol:activeStock||''});
@@ -2238,6 +2240,55 @@ function renderPriceChart(record,tf) {
         label:ctx=>{const v=ctx.raw?.y;return v==null?'':'Vol: '+(v>=1e7?(v/1e7).toFixed(2)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':(v/1e3).toFixed(0)+'K');}
       }}},scales:{x:{type:'timeseries',ticks:{display:false},grid:{display:false}},y:{position:'right',ticks:{color:tickCol,font:{size:9},maxTicksLimit:3,callback:v=>v>=1e7?(v/1e7).toFixed(0)+'Cr':v>=1e5?(v/1e5).toFixed(0)+'L':(v/1e3).toFixed(0)+'K'},grid:{color:gridCol}}}}});
   } catch(err) { console.error('Chart render error:',err.message); }
+}*/
+// ── TRADINGVIEW CHART ──────────────────────────────────────────────────────────
+let _tvWidget = null;
+
+function renderTVChart(symbol) {
+  const container = document.getElementById('tv-chart-wrap');
+  if (!container) return;
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+  // Clear any previous widget
+  container.innerHTML = '';
+  const divId = 'tv_' + symbol + '_' + Date.now();
+  const div = document.createElement('div');
+  div.id = divId;
+  div.style.height = '100%';
+  container.appendChild(div);
+
+  function init() {
+    if (typeof TradingView === 'undefined') { setTimeout(init, 400); return; }
+    try {
+      _tvWidget = new TradingView.widget({
+        autosize:          true,
+        symbol:            'NSE:' + symbol,
+        interval:          'D',
+        timezone:          'Asia/Kolkata',
+        theme:             isLight ? 'light' : 'dark',
+        style:             '1',          // candlestick
+        locale:            'en',
+        toolbar_bg:        isLight ? '#ffffff' : '#1e293b',
+        enable_publishing: false,
+        hide_top_toolbar:  false,
+        hide_legend:       false,
+        save_image:        true,
+        allow_symbol_change: false,
+        studies: [
+          'RSI@tv-basicstudies',
+          'MACD@tv-basicstudies',
+        ],
+        container_id: divId,
+      });
+    } catch(e) { console.error('TradingView widget error:', e); }
+  }
+  init();
+}
+
+// Keep setTimeframe as no-op (TradingView has its own toolbar)
+function setTimeframe(tf) {
+  currentTF = tf;
+  logEvent('chart_timeframe', { timeframe: tf, symbol: activeStock || '' });
 }
 
 // ── Support / Resistance + Deep Dive helpers (SECTION C) ─────────────────────
@@ -2636,7 +2687,7 @@ function renderAnalysis(d) {
       <div class="main-row-v2">
 
         <!-- LEFT: candlestick chart -->
-        <div class="chart-panel-v2">
+<!--        <div class="chart-panel-v2">
           <div class="chart-controls" style="margin-bottom:14px">
             <div class="section-title" style="margin-bottom:0">📈 ${d.symbol} — Daily Candlestick</div>
             <div class="tf-group">
@@ -2651,6 +2702,19 @@ function renderAnalysis(d) {
             ? `<div class="price-canvas-wrap"><canvas id="price-chart"></canvas></div>
                <div class="vol-canvas-wrap" style="height:62px;margin-top:4px"><canvas id="volume-chart"></canvas></div>`
             : `<div class="chart-no-data">↺ Click <strong>Refresh</strong> to load the price chart</div>`}
+          ${renderSRBar(d)}
+        </div>
+-->
+        <!-- LEFT: TradingView chart -->
+        <div class="chart-panel-v2">
+          <div class="chart-controls" style="margin-bottom:10px">
+            <div class="section-title" style="margin-bottom:0">📈 ${d.symbol} — Live Chart</div>
+            <a href="https://www.tradingview.com/chart/?symbol=NSE:${d.symbol}" target="_blank"
+               style="font-size:10px;color:var(--text3);text-decoration:none;display:flex;align-items:center;gap:3px">
+              via TradingView ↗
+            </a>
+          </div>
+          <div id="tv-chart-wrap" style="height:480px;border-radius:8px;overflow:hidden;background:var(--surface2)"></div>
           ${renderSRBar(d)}
         </div>
 
@@ -2677,7 +2741,8 @@ function renderAnalysis(d) {
     </div><!-- /content-v2 -->
   `;
 
-  if (hasChart) setTimeout(() => renderPriceChart(d, 'M3'), 60);
+  /*if (hasChart) setTimeout(() => renderPriceChart(d, 'M3'), 60);*/
+  setTimeout(() => renderTVChart(d.symbol), 80);
   setTimeout(() => {
     populateChatChips(d.signal || 'DEFAULT');
     if (_chatMsgs.length > 0) renderChatMessages();
@@ -2737,7 +2802,7 @@ function toggleTheme(){
   document.documentElement.setAttribute('data-theme',goLight?'light':'dark');
   localStorage.setItem('theme',goLight?'light':'dark');
   document.getElementById('theme-toggle').textContent=goLight?'🌙':'☀️';
-  if(currentRecord?.ohlcv?.length)setTimeout(()=>renderPriceChart(currentRecord,currentTF),30);
+  if (currentRecord) setTimeout(() => renderTVChart(currentRecord.symbol), 30);
 }
 function fmtDate(iso){try{return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return iso||'—';}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
