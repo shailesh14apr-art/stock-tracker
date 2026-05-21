@@ -647,20 +647,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .ai-pill.HOLD     { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
 .ai-pill.REVIEW   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
 
-/* ── SIGNAL BULLETS BAR (3 tags under header) ─────────────────────────── */
-.bullets-bar {
-  display: flex; gap: 7px; flex-wrap: wrap;
-  padding: 9px 28px 10px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 var(--border);
-}
-.stag {
-  display: inline-flex; align-items: flex-start; gap: 5px;
-  padding: 5px 10px; border-radius: 20px; font-size: 11.5px;
-  background: var(--surface2); border: 1px solid var(--border2);
-  color: var(--text2); line-height: 1.3;
-}
+/* bullets removed (unused) */
 
 /* ── MAIN TWO-COLUMN LAYOUT ─────────────────────────────────────────── */
 .content-v2 { display: flex; flex-direction: column; gap: 0; }
@@ -2606,14 +2593,6 @@ function renderAnalysis(d) {
 
   const pilotLabel = { BUY_MORE: '↑ Buy More', HOLD: '→ Hold', REVIEW: '↓ Review Exit' }[d.signal] || d.signal;
 
-  const tPoints = (a.technicalPoints || []).slice(0, 3);
-  const bulletTags = tPoints.map(pt => {
-    const neg = /below|bearish|weak|falling|overbought|pressure|break|decline/i.test(pt);
-    const pos = /above|bullish|strong|rising|oversold|support|bounce|uptrend/i.test(pt);
-    const dot = neg ? '🔴' : pos ? '🟢' : '🟡';
-    return `<span class="stag">${dot} ${pt}</span>`;
-  }).join('');
-
   document.getElementById('main-content').innerHTML = `
 
     <!-- ── HEADER ── -->
@@ -2640,8 +2619,7 @@ function renderAnalysis(d) {
       </div>
     </div>
 
-    <!-- ── LEVEL-2: SIGNAL REASON BULLETS ── -->
-    ${bulletTags ? `<div class="bullets-bar">${bulletTags}</div>` : ''}
+    <!-- (signal bullets removed) -->
 
     <div class="content-v2">
 
