@@ -29,7 +29,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication","name":"BazaarLens","url":"https://www.bazaarlens.in","description":"AI-powered stock analysis for Indian equities listed on NSE. Get Buy/Hold/Review signals, live candlestick charts and AI financial expert chat powered by Claude Sonnet.","applicationCategory":"FinanceApplication","operatingSystem":"Web","inLanguage":"en-IN","author":{"@type":"Organization","name":"BazaarLens","url":"https://www.bazaarlens.in"},"offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}}
 </script>
-
+<script src="https://s3.tradingview.com/tv.js"></script>
 <style>
 
 /* ── DARK-FIRST DESIGN TOKENS ─────────────────────────────────────────── */
@@ -2246,17 +2246,45 @@ let _tvWidget = null;
 function renderTVChart(symbol) {
   const container = document.getElementById('tv-chart-wrap');
   if (!container) return;
-  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-  const theme   = isLight ? 'light' : 'dark';
-  const sym     = encodeURIComponent('NSE:' + symbol);
 
-  container.innerHTML = `
-    <iframe
-      src="https://www.tradingview.com/widgetembed/?symbol=${sym}&interval=D&theme=${theme}&style=1&locale=en&timezone=Asia%2FKolkata&hidesidetoolbar=0&hidetoptoolbar=0&symboledit=0&saveimage=0&studies=%5B%5D"
-      style="width:100%;height:100%;border:none;"
-      allowtransparency="true"
-      allowfullscreen>
-    </iframe>`;
+  // ✅ Properly destroy previous widget before creating new one
+  if (_tvWidget) {
+    try { _tvWidget.remove(); } catch(e) {}
+    _tvWidget = null;
+  }
+
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+  // Fresh container div with unique ID every time
+  container.innerHTML = '';
+  const divId = 'tv_' + symbol + '_' + Date.now();
+  const div = document.createElement('div');
+  div.id = divId;
+  div.style.cssText = 'height:100%;width:100%;';
+  container.appendChild(div);
+
+  function init() {
+    if (typeof TradingView === 'undefined') { setTimeout(init, 400); return; }
+    try {
+      _tvWidget = new TradingView.widget({
+        autosize:            true,
+        symbol:              'NSE:' + symbol,
+        interval:            'D',
+        timezone:            'Asia/Kolkata',
+        theme:               isLight ? 'light' : 'dark',
+        style:               '1',
+        locale:              'en',
+        enable_publishing:   false,
+        hide_top_toolbar:    false,
+        hide_legend:         true,
+        save_image:          false,
+        allow_symbol_change: false,
+        withdateranges:      true,
+        container_id:        divId,
+      });
+    } catch(e) { console.error('TradingView widget error:', e); }
+  }
+  init();
 }
 
 // Keep setTimeframe as no-op (TradingView has its own toolbar)
