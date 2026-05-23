@@ -492,7 +492,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 /* Stats bar */
 .lp-stats-bar{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:28px 40px;}
 .lp-stats-inner{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);}
-.lp-stat{text-align:center;padding:4px 20px;border-right:1px solid var(--border);}
+.lp-stat{text-align:center;padding:4px 20px;border-right:1px solid var(--border);pointer-events:none;}
 .lp-stat:last-child{border-right:none;}
 .lp-stat-num{font-size:30px;font-weight:800;color:var(--accent);}
 .lp-stat-lbl{font-size:12px;color:var(--text3);margin-top:3px;}
@@ -1272,9 +1272,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="sidebar-header-row">
       <div><h2 style="font-size:16px;font-weight:700;letter-spacing:-.3px;">📈 BazaarLens</h2><p>AI-powered weekly analysis</p></div>
       <div style="display:flex;gap:5px;align-items:center">
-        <button class="theme-toggle" onclick="showHub()" title="Back to home">🏠</button>
-        <button class="theme-toggle" onclick="showAccount('app')" title="Account settings">👤</button>
-        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+        <button class="theme-toggle home-btn" id="home-btn" onclick="showHub()" title="Back to home">🏠</button>
+        <button class="theme-toggle account-btn" id="account-btn" onclick="showAccount('app')" title="Account settings">👤</button>
+        <button class="theme-toggle theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
       </div>
     </div>
   </div>

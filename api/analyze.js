@@ -52,6 +52,9 @@ export default async function handler(req) {
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
 
+  // Validate symbol early — applies to both priceOnly and full-analysis paths
+  if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
+
   // priceOnly mode — fast price refresh without full analysis
   if (p.get('priceOnly') === '1') {
     const yahooSym = symbol.toUpperCase() + '.NS';
@@ -79,7 +82,6 @@ export default async function handler(req) {
   let fund = {};
   try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
 
-  if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set' }, 500, cors);
 
@@ -337,7 +339,10 @@ function calcRSI(c, p=14) {
   if (c.length < p+1) return 50;
   let g=0, l=0;
   for (let i=c.length-p; i<c.length; i++) { const d=c[i]-c[i-1]; if(d>0) g+=d; else l-=d; }
-  return 100-100/(1+(g/p)/((l/p)||0.001));
+  if (g===0 && l===0) return 50;   // flat prices → neutral RSI
+  const avgG=g/p, avgL=l/p;
+  if (avgL===0) return 100;        // only gains → overbought
+  return 100-100/(1+avgG/avgL);
 }
 function emaSeriesArr(c, p) {
   const k = 2/(p+1), res = new Array(c.length).fill(null);
