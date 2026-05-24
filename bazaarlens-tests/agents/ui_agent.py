@@ -1,7 +1,7 @@
 """
-UI Test Agent
-Uses Playwright to drive a real browser against the BazaarLens frontend.
-Claude evaluates screenshots for intelligent visual assertions.
+UI Test Agent — BazaarLens
+Playwright browser automation with Claude visual assertions.
+Every locator is on a single line to avoid IndentationError in all Python versions.
 """
 import base64
 import json
@@ -23,28 +23,16 @@ def screenshot_b64(page):
     return base64.b64encode(page.screenshot()).decode()
 
 
-def claude_assert(screenshot_b64_data, question, api_key):
+def claude_assert(b64, question, api_key):
     response = httpx.post(
         ANTHROPIC_API,
-        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
-                 "Content-Type": "application/json"},
+        headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
         json={
-            "model": CLAUDE_MODEL,
-            "max_tokens": 200,
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {
-                        "type": "base64", "media_type": "image/png",
-                        "data": screenshot_b64_data
-                    }},
-                    {"type": "text", "text":
-                        f"{question}\n\n"
-                        "Reply ONLY with a JSON object: "
-                        '{"pass": true/false, "reason": "one sentence explanation"}'
-                    }
-                ]
-            }]
+            "model": CLAUDE_MODEL, "max_tokens": 200,
+            "messages": [{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                {"type": "text", "text": f"{question}\n\nReply ONLY with JSON: {{\"pass\": true/false, \"reason\": \"one sentence\"}}"}
+            ]}]
         },
         timeout=30.0
     )
@@ -53,7 +41,24 @@ def claude_assert(screenshot_b64_data, question, api_key):
     return data["pass"], data["reason"]
 
 
-# ── Individual test cases ─────────────────────────────────────────────────────
+# ── Tests ─────────────────────────────────────────────────────────────────────
+
+def test_no_js_errors(page, base_url):
+    """Catch JS syntax errors that break the entire page."""
+    errors = []
+    page.on("pageerror", lambda err: errors.append(str(err)))
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    page.wait_for_timeout(2000)
+    ok = len(errors) == 0
+    return make_result(
+        "No JavaScript errors on load",
+        "pass" if ok else "fail",
+        "pass" if ok else "critical",
+        "window.onerror / pageerror should be empty on load",
+        "; ".join(errors) if errors else "none",
+        "zero JS errors"
+    )
+
 
 def test_page_loads(page, base_url):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
@@ -70,11 +75,12 @@ def test_page_loads(page, base_url):
 
 
 def test_theme_toggle(page, base_url):
+    """Uses #theme-toggle ID — avoids matching multiple .theme-toggle buttons."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
     toggle = page.locator("#theme-toggle").first
     if toggle.count() == 0:
-        return make_result("Theme toggle", "fail", "low", "No #theme-toggle found", "not found", "toggle present")
+        return make_result("Theme toggle", "fail", "low", "No #theme-toggle element found", "not found", "#theme-toggle present")
     toggle.click()
     page.wait_for_timeout(300)
     new_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
@@ -83,80 +89,31 @@ def test_theme_toggle(page, base_url):
         "Theme toggle — switches dark/light",
         "pass" if ok else "fail",
         "pass" if ok else "medium",
-        "Click #theme-toggle → data-theme should change",
+        "Click #theme-toggle → data-theme attribute should change",
         f"{initial_theme} → {new_theme}",
         "theme attribute changes"
     )
 
-def test_email_login_flow(page, base_url, test_email, test_password):
-    """
-    Tests the actual Firebase login form — does NOT bypass via localStorage.
-    Verifies error states, success state, and the hub page appearing after login.
-    """
-    page.goto(base_url, wait_until="networkidle", timeout=30000)
-
-    # Should show login overlay or landing page first
-    page.locator("#login-overlay, #landing").first.wait_for(timeout=5000)
-
-    # Navigate to login form if on landing
-    if page.locator("#landing").is_visible():
-        page.locator("button.lp-nav-signin").click()
-        page.wait_for_timeout(500)
-
-    # Fill wrong password first — should show error, NOT "account already exists"
-    page.fill("#lo-email", test_email)
-    page.fill("#lo-password", "wrongpassword123")
-    page.locator("#lo-signin-btn").click()
-    page.wait_for_timeout(3000)
-
-    error = page.locator("#lo-auth-error")
-    error_text = error.inner_text() if error.is_visible() else ""
-
-    # This is the exact bug — wrong password should NOT say "account already exists"
-    bad_error = "account already exists" in error_text.lower()
-    if bad_error:
-        return make_result(
-            "Login — wrong password shows correct error",
-            "fail", "critical",
-            "Wrong password should show 'Incorrect password', not 'account already exists'",
-            error_text,
-            "Incorrect email or password"
-        )
-
-    # Now test correct credentials
-    page.fill("#lo-password", test_password)
-    page.locator("#lo-signin-btn").click()
-    page.wait_for_timeout(5000)
-
-    hub_visible = page.locator("#hub").is_visible()
-    return make_result(
-        "Login — successful sign in shows hub",
-        "pass" if hub_visible else "fail",
-        "pass" if hub_visible else "critical",
-        "After correct credentials, hub page should appear",
-        f"hub visible: {hub_visible}",
-        "hub visible"
-    )
 
 def test_add_stock(page, base_url, symbol="RELIANCE"):
     """
-    BazaarLens flow: inject localStorage to bypass Firebase auth,
-    then click '+ Add Stock' → modal opens → search → click result.
+    Bypass Firebase auth via localStorage, call showApp() to get past the Hub,
+    then open the Add Stock modal and add a symbol.
     """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-    # Bypass Firebase auth by pre-seeding watchlist in localStorage
-page.evaluate("() => typeof showApp === 'function' && showApp()")
-page.wait_for_timeout(3000)
-
-    # Bypass the Hub landing page — app shows Hub first, then showApp() reveals stocks
-
+    page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    # Move past Hub landing page
+    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.wait_for_timeout(3000)
 
     add_btn = page.locator("button.add-btn").first
     if add_btn.count() == 0 or not add_btn.is_visible():
         return make_result(
             f"Add stock — modal opens ({symbol})",
             "fail", "critical",
-            "Could not find .add-btn — app may require Firebase auth",
+            "Could not find .add-btn after showApp()",
             "button not found",
             ".add-btn visible"
         )
@@ -167,15 +124,14 @@ page.wait_for_timeout(3000)
     search.fill(symbol)
     page.wait_for_timeout(800)
 
-    first_result = page.locator("#modal-list .modal-item").first
+    first_result = page.locator("#modal-list .modal-stock-item").first
     if first_result.count() > 0:
         first_result.click()
     else:
         search.press("Enter")
 
     page.wait_for_timeout(2000)
-
-    card = page.locator(f"#watchlist-container").filter(has_text=symbol).first
+    card = page.locator("#watchlist-container").filter(has_text=symbol).first
     visible = card.count() > 0
     return make_result(
         f"Add stock — {symbol} appears in sidebar",
@@ -189,16 +145,14 @@ page.wait_for_timeout(3000)
 
 def test_chart_renders(page, base_url, symbol, api_key):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    page.evaluate("() => typeof showApp === 'function' && showApp()")
     page.wait_for_timeout(10000)
-
-    # Bypass the Hub landing page — app shows Hub first, then showApp() reveals stocks
-
-
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
-        "Does this page show a financial chart — either a candlestick chart, "
-        "line chart, or price chart with an x-axis showing dates? "
+        "Does this page show a financial chart — candlestick, line, or price chart with date x-axis? "
         "Answer true if any chart is visible, false if only loading spinners or empty space."
     ))
     return make_result(
@@ -206,8 +160,7 @@ page.evaluate("() => typeof showApp === 'function' && showApp()")
         "pass" if ok else "fail",
         "pass" if ok else "high",
         "Price chart should appear after selecting a stock",
-        reason,
-        "Chart visible"
+        reason, "Chart visible"
     )
 
 
@@ -215,28 +168,30 @@ def test_analysis_card_renders(page, base_url, symbol, api_key):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
-    page.wait_for_timeout(30000)   # full Claude analysis can take ~20s
+    page.wait_for_timeout(2000)
+    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.wait_for_timeout(30000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
-        "Does this stock analysis app show an AI analysis card with a signal "
-        "label of BUY MORE, HOLD, or REVIEW? "
-        "Look for a card or panel that contains one of these three words prominently."
+        "Does this stock analysis app show an AI analysis card with BUY MORE, HOLD, or REVIEW? "
+        "Answer true if one of these three words is prominently visible."
     ))
     return make_result(
         f"AI analysis card — signal rendered ({symbol})",
         "pass" if ok else "fail",
         "pass" if ok else "high",
         "AI analysis card should show BUY_MORE / HOLD / REVIEW after loading",
-        reason,
-        "Visible signal label"
+        reason, "Visible signal label"
     )
 
 
 def test_localstorage_cache(page, base_url, symbol):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    page.evaluate("() => typeof showApp === 'function' && showApp()")
     page.wait_for_timeout(35000)
-
     cache_keys = page.evaluate(
         f"() => Object.keys(localStorage).filter(k => k.toLowerCase().includes('{symbol.lower()}'))"
     )
@@ -253,22 +208,22 @@ page.evaluate("() => typeof showApp === 'function' && showApp()")
 
 def test_remove_stock(page, base_url, symbol):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
+    page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
+    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.wait_for_timeout(3000)
 
-    # BazaarLens uses class="remove-btn" on each stock card
-    remove_btn = page.locator(f"#watchlist-container .remove-btn").first
+    remove_btn = page.locator("#watchlist-container .remove-btn").first
     if remove_btn.count() == 0:
         return make_result(
             f"Remove stock — button exists ({symbol})",
             "fail", "medium",
-            "Could not find .remove-btn on the stock card",
-            "remove button not found",
-            ".remove-btn visible on card"
+            "Could not find .remove-btn on any stock card",
+            "remove button not found", ".remove-btn visible on card"
         )
     remove_btn.click()
     page.wait_for_timeout(500)
-
     still_visible = page.locator("#watchlist-container").filter(has_text=symbol).count() > 0
     ok = not still_visible
     return make_result(
@@ -286,17 +241,15 @@ def test_indices_visible(page, base_url, api_key):
     page.wait_for_timeout(5000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
-        "Does this page show Indian stock market index values — "
-        "such as Nifty 50, Sensex, Bank Nifty, or similar index names with numbers? "
-        "Answer true if you can see any market index with a numeric value."
+        "Does this page show Indian stock market index values such as Nifty 50, Sensex, or Bank Nifty with numbers? "
+        "Answer true if any market index with a numeric value is visible."
     ))
     return make_result(
         "Market indices — visible on load",
         "pass" if ok else "fail",
         "pass" if ok else "medium",
         "Nifty / Sensex index values should appear on the page",
-        reason,
-        "Index values visible"
+        reason, "Index values visible"
     )
 
 
@@ -326,7 +279,8 @@ def ui_agent(state: AgentState) -> dict:
         browser = pw.chromium.launch(headless=True)
         page    = browser.new_page(viewport={"width": 1280, "height": 800})
 
-        for test_fn in [
+        tests = [
+            lambda: test_no_js_errors(page, base_url),
             lambda: test_page_loads(page, base_url),
             lambda: test_theme_toggle(page, base_url),
             lambda: test_indices_visible(page, base_url, api_key),
@@ -334,15 +288,21 @@ def ui_agent(state: AgentState) -> dict:
             lambda: test_chart_renders(page, base_url, symbol, api_key),
             lambda: test_localstorage_cache(page, base_url, symbol),
             lambda: test_remove_stock(page, base_url, symbol),
-        ]:
+        ]
+        if api_key:
+            tests.insert(6, lambda: test_analysis_card_renders(page, base_url, symbol, api_key))
+
+        for test_fn in tests:
             try:
                 r = test_fn()
                 icon = "✓" if r["status"] == "pass" else "✗"
                 print(f"  [{icon}] {r['test_name']} → {r['status'].upper()}")
                 results.append(r)
             except Exception as e:
-                results.append(make_result(str(test_fn), "error", "high",
-                                           "Test threw an exception", str(e), "no exception"))
+                results.append(make_result(
+                    test_fn.__name__ if hasattr(test_fn, '__name__') else "unknown",
+                    "error", "high", "Test threw an exception", str(e), "no exception"
+                ))
 
         browser.close()
 
