@@ -72,7 +72,7 @@ def test_page_loads(page, base_url):
 def test_theme_toggle(page, base_url):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-    toggle = page.locator(".theme-toggle")
+toggle = page.locator(".theme-toggle").nth(2)
     if toggle.count() == 0:
         return make_result("Theme toggle", "fail", "low", "No .theme-toggle found", "not found", "toggle present")
     toggle.click()
@@ -96,9 +96,11 @@ def test_add_stock(page, base_url, symbol="RELIANCE"):
     """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     # Bypass Firebase auth by pre-seeding watchlist in localStorage
-    page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
-    page.reload(wait_until="networkidle")
-    page.wait_for_timeout(2000)
+page.evaluate("() => typeof showApp === 'function' && showApp()")
+page.wait_for_timeout(3000)
+
+    # Bypass the Hub landing page — app shows Hub first, then showApp() reveals stocks
+
 
     add_btn = page.locator("button.add-btn").first
     if add_btn.count() == 0 or not add_btn.is_visible():
@@ -138,9 +140,12 @@ def test_add_stock(page, base_url, symbol="RELIANCE"):
 
 def test_chart_renders(page, base_url, symbol, api_key):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
-    page.reload(wait_until="networkidle")
+page.evaluate("() => typeof showApp === 'function' && showApp()")
     page.wait_for_timeout(10000)
+
+    # Bypass the Hub landing page — app shows Hub first, then showApp() reveals stocks
+
+
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
         "Does this page show a financial chart — either a candlestick chart, "
@@ -180,9 +185,9 @@ def test_analysis_card_renders(page, base_url, symbol, api_key):
 
 def test_localstorage_cache(page, base_url, symbol):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
-    page.reload(wait_until="networkidle")
+page.evaluate("() => typeof showApp === 'function' && showApp()")
     page.wait_for_timeout(35000)
+
     cache_keys = page.evaluate(
         f"() => Object.keys(localStorage).filter(k => k.toLowerCase().includes('{symbol.lower()}'))"
     )
@@ -199,8 +204,7 @@ def test_localstorage_cache(page, base_url, symbol):
 
 def test_remove_stock(page, base_url, symbol):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
-    page.reload(wait_until="networkidle")
+page.evaluate("() => typeof showApp === 'function' && showApp()")
     page.wait_for_timeout(2000)
 
     # BazaarLens uses class="remove-btn" on each stock card

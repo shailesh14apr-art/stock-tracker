@@ -26,7 +26,11 @@ def calc_rsi(closes: list[float], period: int = 14) -> float:
         else:
             losses -= diff
     avg_gain = gains / period
-    avg_loss = losses / period or 0.001
+    avg_loss = losses / period
+    if avg_gain == 0 and avg_loss == 0:
+        return 50.0          # ← this line was missing
+    if avg_loss == 0:
+        return 100.0         # ← and this one
     return 100 - 100 / (1 + avg_gain / avg_loss)
 
 
