@@ -41,6 +41,26 @@ def claude_assert(b64, question, api_key):
     return data["pass"], data["reason"]
 
 
+def bypass_auth_and_show_app(page):
+    """
+    Common helper: hide landing page, show the app shell.
+    Called by every test that needs the main UI rather than the landing page.
+    """
+    page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }")
+
+
+def bypass_auth_and_trigger_analysis(page, symbol):
+    """
+    Common helper: hide landing, show app, then trigger a live analysis.
+    Used by tests that need actual analysis data (charts, AI card, cache).
+    showApp() only shows 'No analysis yet' if no cached data exists —
+    we must call triggerAnalysis() explicitly to kick off the API call.
+    """
+    page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }")
+    page.wait_for_timeout(3000)
+    page.evaluate(f"() => typeof triggerAnalysis === 'function' && triggerAnalysis('{symbol}')")
+
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 def test_no_js_errors(page, base_url):
@@ -75,8 +95,14 @@ def test_page_loads(page, base_url):
 
 
 def test_theme_toggle(page, base_url):
-    """Uses #theme-toggle ID — avoids matching multiple .theme-toggle buttons."""
+    """
+    Hide the landing page first — its z-index:500 covers the sidebar theme button.
+    Uses #theme-toggle ID to avoid matching the 3 buttons sharing .theme-toggle class.
+    """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
+    # Must hide landing before interacting with app shell elements
+    page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); }")
+    page.wait_for_timeout(500)
     initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
     toggle = page.locator("#theme-toggle").first
     if toggle.count() == 0:
@@ -97,15 +123,15 @@ def test_theme_toggle(page, base_url):
 
 def test_add_stock(page, base_url, symbol="RELIANCE"):
     """
-    Bypass Firebase auth via localStorage, call showApp() to get past the Hub,
-    then open the Add Stock modal and add a symbol.
+    Bypass Firebase auth via localStorage injection, then show the app.
+    Opens Add Stock modal and verifies the symbol appears in the sidebar.
+    Does NOT trigger analysis — just tests the modal + watchlist add flow.
     """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    # Move past Hub landing page
-    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
+    bypass_auth_and_show_app(page)
     page.wait_for_timeout(3000)
 
     add_btn = page.locator("button.add-btn").first
@@ -113,9 +139,8 @@ def test_add_stock(page, base_url, symbol="RELIANCE"):
         return make_result(
             f"Add stock — modal opens ({symbol})",
             "fail", "critical",
-            "Could not find .add-btn after showApp()",
-            "button not found",
-            ".add-btn visible"
+            "Could not find .add-btn after hideLanding()+showApp()",
+            "button not found", ".add-btn visible"
         )
     add_btn.click()
     page.wait_for_timeout(500)
@@ -144,33 +169,40 @@ def test_add_stock(page, base_url, symbol="RELIANCE"):
 
 
 def test_chart_renders(page, base_url, symbol, api_key):
+    """
+    Injects watchlist, triggers a live analysis (required — showApp alone shows
+    'No analysis yet' if no cache exists), then waits for chart to appear.
+    """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
-    page.wait_for_timeout(10000)
+    bypass_auth_and_trigger_analysis(page, symbol)
+    page.wait_for_timeout(35000)   # wait for full API call + chart render
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
         "Does this page show a financial chart — candlestick, line, or price chart with date x-axis? "
-        "Answer true if any chart is visible, false if only loading spinners or empty space."
+        "Answer true if any chart is visible, false if only loading spinners or empty state."
     ))
     return make_result(
-        f"Chart renders — visible after stock load ({symbol})",
+        f"Chart renders — visible after analysis ({symbol})",
         "pass" if ok else "fail",
         "pass" if ok else "high",
-        "Price chart should appear after selecting a stock",
+        "Price chart should appear after triggerAnalysis() completes",
         reason, "Chart visible"
     )
 
 
 def test_analysis_card_renders(page, base_url, symbol, api_key):
+    """
+    Triggers a live analysis and checks the AI scorecard shows BUY MORE/HOLD/REVIEW.
+    """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
-    page.wait_for_timeout(30000)
+    bypass_auth_and_trigger_analysis(page, symbol)
+    page.wait_for_timeout(35000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
         "Does this stock analysis app show an AI analysis card with BUY MORE, HOLD, or REVIEW? "
@@ -180,29 +212,37 @@ def test_analysis_card_renders(page, base_url, symbol, api_key):
         f"AI analysis card — signal rendered ({symbol})",
         "pass" if ok else "fail",
         "pass" if ok else "high",
-        "AI analysis card should show BUY_MORE / HOLD / REVIEW after loading",
+        "AI scorecard should show BUY_MORE / HOLD / REVIEW after analysis",
         reason, "Visible signal label"
     )
 
 
 def test_localstorage_cache(page, base_url, symbol):
+    """
+    Triggers analysis and checks localStorage for a cache entry.
+    Cache is only written AFTER a successful analysis completes.
+    """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
-    page.wait_for_timeout(35000)
+    bypass_auth_and_trigger_analysis(page, symbol)
+    page.wait_for_timeout(40000)   # extra time for cache to be written
     cache_keys = page.evaluate(
-        f"() => Object.keys(localStorage).filter(k => k.toLowerCase().includes('{symbol.lower()}'))"
+        f"() => Object.keys(localStorage).filter(k => k.toLowerCase().includes('{symbol.lower()}') || k === 'stockData')"
     )
-    ok = len(cache_keys) > 0
+    # Also check stockData key which is where storeAnalysis() writes
+    stock_data = page.evaluate(
+        f"() => {{ try {{ const d = JSON.parse(localStorage.getItem('stockData') || '{{}}'); return d['{symbol}'] != null; }} catch(e) {{ return false; }} }}"
+    )
+    ok = stock_data or len(cache_keys) > 0
     return make_result(
         f"localStorage cache — entry created ({symbol})",
         "pass" if ok else "fail",
         "pass" if ok else "medium",
-        "Analysis result should be cached in localStorage",
-        f"cache keys: {cache_keys or 'none'}",
-        "At least one localStorage key for symbol"
+        "storeAnalysis() should write to localStorage.stockData after analysis",
+        f"stockData[{symbol}] present: {stock_data}, keys: {cache_keys or 'none'}",
+        f"stockData[{symbol}] exists"
     )
 
 
@@ -211,7 +251,7 @@ def test_remove_stock(page, base_url, symbol):
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
+    bypass_auth_and_show_app(page)
     page.wait_for_timeout(3000)
 
     remove_btn = page.locator("#watchlist-container .remove-btn").first
@@ -237,6 +277,7 @@ def test_remove_stock(page, base_url, symbol):
 
 
 def test_indices_visible(page, base_url, api_key):
+    """Indices appear on the Hub page — no auth bypass needed."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.wait_for_timeout(5000)
     ss = screenshot_b64(page)
@@ -248,7 +289,7 @@ def test_indices_visible(page, base_url, api_key):
         "Market indices — visible on load",
         "pass" if ok else "fail",
         "pass" if ok else "medium",
-        "Nifty / Sensex index values should appear on the page",
+        "Nifty / Sensex index values should appear on the landing/hub page",
         reason, "Index values visible"
     )
 
