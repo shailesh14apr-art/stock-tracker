@@ -38,3 +38,4 @@ yarn-error.log*
 *.swo
 *~
 .DS_Store
+bazaarlens-tests/reports/
