@@ -72,7 +72,7 @@ def test_page_loads(page, base_url):
 def test_theme_toggle(page, base_url):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-toggle = page.locator(".theme-toggle").nth(2)
+    toggle = page.locator(".theme-toggle").nth(2)
     if toggle.count() == 0:
         return make_result("Theme toggle", "fail", "low", "No .theme-toggle found", "not found", "toggle present")
     toggle.click()
@@ -137,7 +137,7 @@ def test_email_login_flow(page, base_url, test_email, test_password):
         f"hub visible: {hub_visible}",
         "hub visible"
     )
-    
+
 def test_add_stock(page, base_url, symbol="RELIANCE"):
     """
     BazaarLens flow: inject localStorage to bypass Firebase auth,
