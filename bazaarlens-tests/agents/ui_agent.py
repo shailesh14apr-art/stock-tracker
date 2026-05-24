@@ -88,7 +88,56 @@ toggle = page.locator(".theme-toggle").nth(2)
         "theme attribute changes"
     )
 
+def test_email_login_flow(page, base_url, test_email, test_password):
+    """
+    Tests the actual Firebase login form — does NOT bypass via localStorage.
+    Verifies error states, success state, and the hub page appearing after login.
+    """
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
 
+    # Should show login overlay or landing page first
+    page.locator("#login-overlay, #landing").first.wait_for(timeout=5000)
+
+    # Navigate to login form if on landing
+    if page.locator("#landing").is_visible():
+        page.locator("button.lp-nav-signin").click()
+        page.wait_for_timeout(500)
+
+    # Fill wrong password first — should show error, NOT "account already exists"
+    page.fill("#lo-email", test_email)
+    page.fill("#lo-password", "wrongpassword123")
+    page.locator("#lo-signin-btn").click()
+    page.wait_for_timeout(3000)
+
+    error = page.locator("#lo-auth-error")
+    error_text = error.inner_text() if error.is_visible() else ""
+
+    # This is the exact bug — wrong password should NOT say "account already exists"
+    bad_error = "account already exists" in error_text.lower()
+    if bad_error:
+        return make_result(
+            "Login — wrong password shows correct error",
+            "fail", "critical",
+            "Wrong password should show 'Incorrect password', not 'account already exists'",
+            error_text,
+            "Incorrect email or password"
+        )
+
+    # Now test correct credentials
+    page.fill("#lo-password", test_password)
+    page.locator("#lo-signin-btn").click()
+    page.wait_for_timeout(5000)
+
+    hub_visible = page.locator("#hub").is_visible()
+    return make_result(
+        "Login — successful sign in shows hub",
+        "pass" if hub_visible else "fail",
+        "pass" if hub_visible else "critical",
+        "After correct credentials, hub page should appear",
+        f"hub visible: {hub_visible}",
+        "hub visible"
+    )
+    
 def test_add_stock(page, base_url, symbol="RELIANCE"):
     """
     BazaarLens flow: inject localStorage to bypass Firebase auth,

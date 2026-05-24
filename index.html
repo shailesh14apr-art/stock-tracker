@@ -1556,41 +1556,38 @@ function loResetLoginForm() {
   if (dh) dh.style.display = 'none';
 }
 
-function handleLoginEmail() {
-  if (!loValidate()) return;
-  loClearError();
-  const email=document.getElementById('lo-email').value.trim(), pw=document.getElementById('lo-password').value;
-  const btn=document.getElementById('lo-signin-btn');
-  btn.classList.add('loading');
-  document.getElementById('lo-signin-label').textContent = 'Signing in…';
-  _auth.signInWithEmailAndPassword(email, pw)
-    .then(cred => {
-      if (!cred.user.emailVerified) {
-        cred.user.sendEmailVerification().catch(()=>{});
-        return _auth.signOut().then(() => { loResetEmailBtn(); loShowEmailSent(email, true); });
-      }
-    })
-    .catch(err => {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        _auth.createUserWithEmailAndPassword(email, pw)
-          .then(cred => {
-            _pendingVerification = true; _pendingVerifEmail = email;
-            return cred.user.sendEmailVerification()
-              .then(() => _auth.signOut())
-              .then(() => { _pendingVerification = false; loResetEmailBtn(); loShowEmailSent(email, false); });
-          })
-          .catch(createErr => {
-            _pendingVerification = false; loResetEmailBtn();
-            const msgs = {'auth/weak-password':'Password must be at least 6 characters.','auth/email-already-in-use':'Account already exists — try signing in.'};
-            loShowError(msgs[createErr.code] || createErr.message);
-          });
-      } else {
-        loResetEmailBtn();
-        const msgs = {'auth/wrong-password':'Incorrect password. Please try again.','auth/invalid-email':'Invalid email address.','auth/too-many-requests':'Too many attempts. Please try again later.'};
-        loShowError(msgs[err.code] || err.message);
-      }
-    });
-}
+.catch(err => {
+  // auth/user-not-found: older SDK only — try to auto-register
+  if (err.code === 'auth/user-not-found') {
+    _auth.createUserWithEmailAndPassword(email, pw)
+      .then(cred => {
+        _pendingVerification = true; _pendingVerifEmail = email;
+        return cred.user.sendEmailVerification()
+          .then(() => _auth.signOut())
+          .then(() => { _pendingVerification = false; loResetEmailBtn(); loShowEmailSent(email, false); });
+      })
+      .catch(createErr => {
+        _pendingVerification = false; loResetEmailBtn();
+        const msgs = {
+          'auth/weak-password': 'Password must be at least 6 characters.',
+          'auth/email-already-in-use': 'Account already exists — try signing in.'
+        };
+        loShowError(msgs[createErr.code] || createErr.message);
+      });
+  } else {
+    // auth/invalid-credential = wrong password OR unknown email in newer Firebase SDK
+    // Do NOT attempt account creation here — show a clear message instead
+    loResetEmailBtn();
+    const msgs = {
+      'auth/invalid-credential': 'Incorrect email or password. Please try again.',
+      'auth/wrong-password':     'Incorrect password. Please try again.',
+      'auth/invalid-email':      'Invalid email address.',
+      'auth/too-many-requests':  'Too many attempts. Please wait and try again.',
+      'auth/user-disabled':      'This account has been disabled.',
+    };
+    loShowError(msgs[err.code] || err.message);
+  }
+});
 
 function loShowEmailSent(email, resent) {
   _pendingVerifEmail = email;
