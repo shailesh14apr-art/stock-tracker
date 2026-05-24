@@ -105,7 +105,7 @@ def test_add_stock(page, base_url, symbol="RELIANCE"):
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     # Move past Hub landing page
-    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
     page.wait_for_timeout(3000)
 
     add_btn = page.locator("button.add-btn").first
@@ -148,7 +148,7 @@ def test_chart_renders(page, base_url, symbol, api_key):
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
     page.wait_for_timeout(10000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
@@ -169,7 +169,7 @@ def test_analysis_card_renders(page, base_url, symbol, api_key):
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
     page.wait_for_timeout(30000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
@@ -190,7 +190,7 @@ def test_localstorage_cache(page, base_url, symbol):
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
     page.wait_for_timeout(35000)
     cache_keys = page.evaluate(
         f"() => Object.keys(localStorage).filter(k => k.toLowerCase().includes('{symbol.lower()}'))"
@@ -211,7 +211,7 @@ def test_remove_stock(page, base_url, symbol):
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
-    page.evaluate("() => typeof showApp === 'function' && showApp()")
+    page.evaluate("""() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }""")
     page.wait_for_timeout(3000)
 
     remove_btn = page.locator("#watchlist-container .remove-btn").first
