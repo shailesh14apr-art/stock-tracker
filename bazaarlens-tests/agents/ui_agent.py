@@ -72,9 +72,9 @@ def test_page_loads(page, base_url):
 def test_theme_toggle(page, base_url):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-    toggle = page.locator(".theme-toggle").nth(2)
+    toggle = page.locator("#theme-toggle").first
     if toggle.count() == 0:
-        return make_result("Theme toggle", "fail", "low", "No .theme-toggle found", "not found", "toggle present")
+        return make_result("Theme toggle", "fail", "low", "No #theme-toggle found", "not found", "toggle present")
     toggle.click()
     page.wait_for_timeout(300)
     new_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
@@ -83,7 +83,7 @@ def test_theme_toggle(page, base_url):
         "Theme toggle — switches dark/light",
         "pass" if ok else "fail",
         "pass" if ok else "medium",
-        "Click .theme-toggle → data-theme should change",
+        "Click #theme-toggle → data-theme should change",
         f"{initial_theme} → {new_theme}",
         "theme attribute changes"
     )
