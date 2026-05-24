@@ -877,6 +877,96 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   flex: 1; padding: 24px 16px;
 }
 
+/* ── PORTFOLIO CHAT PAGE ─────────────────────────────────────────────── */
+#portfolio-chat-page {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--bg); display: flex; flex-direction: column; overflow: hidden;
+}
+.pc-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0;
+}
+.pc-back {
+  background: none; border: 1px solid var(--border2); color: var(--text2);
+  border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+  font-family: inherit; transition: all .15s;
+}
+.pc-back:hover { background: var(--surface2); color: var(--text); }
+.pc-header-info { flex: 1; }
+.pc-title { font-size: 16px; font-weight: 700; letter-spacing: -.3px; }
+.pc-subtitle { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.pc-signal-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pc-pill {
+  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+}
+.pc-pill-buy    { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green-border); }
+.pc-pill-hold   { background: var(--amber-bg);  color: var(--amber);  border: 1px solid var(--amber-border); }
+.pc-pill-review { background: var(--red-bg);    color: var(--red);    border: 1px solid var(--red-border); }
+.pc-pill-na     { background: var(--surface2);  color: var(--text3);  border: 1px solid var(--border2); }
+.pc-body {
+  flex: 1; display: flex; flex-direction: column;
+  max-width: 780px; width: 100%; margin: 0 auto;
+  padding: 0 20px; overflow: hidden;
+}
+.pc-msgs {
+  flex: 1; overflow-y: auto; padding: 20px 0 12px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.pc-msgs::-webkit-scrollbar { width: 4px; }
+.pc-msgs::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+.pc-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 8px; padding: 32px 16px;
+}
+.pc-empty-icon  { font-size: 40px; }
+.pc-empty-title { font-size: 16px; font-weight: 700; }
+.pc-empty-sub   { font-size: 13px; color: var(--text3); line-height: 1.55; max-width: 360px; }
+.pc-chips-wrap  { border-top: 1px solid var(--border); padding: 12px 0 8px; flex-shrink: 0; }
+.pc-chips-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--text3); margin-bottom: 8px;
+}
+.pc-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.pc-chip {
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 7px 11px; font-size: 12px; color: var(--text2); cursor: pointer;
+  font-family: inherit; transition: all .15s; text-align: left; line-height: 1.3;
+}
+.pc-chip:hover { background: rgba(59,130,246,.12); border-color: var(--accent); color: var(--text); }
+.pc-input-row {
+  display: flex; gap: 8px; align-items: flex-end;
+  padding: 10px 0 16px; flex-shrink: 0;
+  border-top: 1px solid var(--border);
+}
+#pc-input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 13px;
+  font-family: inherit; resize: none; outline: none;
+  max-height: 90px; min-height: 40px; line-height: 1.5; overflow-y: auto;
+  transition: border-color .15s;
+}
+#pc-input:focus { border-color: var(--accent); }
+#pc-input::placeholder { color: var(--text3); }
+#pc-send {
+  width: 38px; height: 38px; border-radius: 9px; background: var(--accent);
+  border: none; color: #fff; font-size: 17px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+}
+#pc-send:hover { background: var(--accent2); }
+#pc-send:active { transform: scale(.93); }
+#pc-send:disabled { background: var(--border2); cursor: not-allowed; color: var(--text3); }
+.pc-foot {
+  font-size: 9px; color: var(--text3); text-align: center;
+  padding-bottom: 14px; flex-shrink: 0; line-height: 1.5;
+}
+.pc-notice {
+  font-size: 11px; color: var(--amber); background: var(--amber-bg);
+  border: 1px solid var(--amber-border); border-radius: 7px;
+  padding: 8px 12px; margin-bottom: 10px; line-height: 1.5; flex-shrink: 0;
+}
+
 </style>
 </head>
 <body>
@@ -1215,11 +1305,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <p>Filter NSE stocks by sector, RSI range, MACD signal and AI confidence score — results ranked by technical strength.</p>
         <button class="hub-notify-btn" disabled>Notify Me When Live</button>
       </div>
-      <div class="hub-card hub-card-small">
-        <div class="hub-card-small-top"><div class="hub-small-icon" style="background:#f0fdf4">💼</div><span class="hub-soon-badge">Coming Soon</span></div>
-        <h3>Portfolio Tracker</h3>
-        <p>Track your holdings, average cost and unrealised P&amp;L with portfolio-level AI analysis and position-sizing alerts.</p>
-        <button class="hub-notify-btn" disabled>Notify Me When Live</button>
+      <div class="hub-card hub-card-small" onclick="showPortfolioChat()" style="cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="hub-card-small-top">
+          <div class="hub-small-icon" style="background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(59,130,246,.1));border:1px solid rgba(56,189,248,.25);">💬</div>
+          <span class="hub-live-badge" style="font-size:9px;padding:2px 8px;"><span class="hub-live-dot"></span>&nbsp;Live</span>
+        </div>
+        <h3>Portfolio Chat</h3>
+        <p>Ask AI about your entire watchlist — compare stocks, spot risks, and get cross-portfolio insights in plain English.</p>
+        <button class="hub-open-btn" style="font-size:12px;padding:8px 16px;margin-top:auto;" onclick="event.stopPropagation();showPortfolioChat()">Open Portfolio Chat →</button>
       </div>
       <div class="hub-card hub-card-small">
         <div class="hub-card-small-top"><div class="hub-small-icon" style="background:#fff7ed">📅</div><span class="hub-soon-badge">Coming Soon</span></div>
@@ -1264,6 +1357,59 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <button class="acct-signout-btn" onclick="handleSignOut()">Sign Out</button>
     </div>
   </div>
+</div>
+
+<!-- ── PORTFOLIO CHAT PAGE ───────────────────────────────────────────────── -->
+<div id="portfolio-chat-page" style="display:none;">
+
+  <!-- Header -->
+  <div class="pc-header">
+    <button class="pc-back" onclick="hidePortfolioChat()">← Back</button>
+    <div class="pc-header-info">
+      <div class="pc-title">💬 Portfolio Chat</div>
+      <div class="pc-subtitle" id="pc-subtitle">Ask AI about your entire watchlist</div>
+    </div>
+    <div class="pc-signal-pills" id="pc-signal-pills"></div>
+  </div>
+
+  <!-- Body -->
+  <div class="pc-body">
+
+    <!-- Unanalysed notice -->
+    <div class="pc-notice" id="pc-notice" style="display:none;"></div>
+
+    <!-- Messages -->
+    <div class="pc-msgs" id="pc-msgs">
+      <div class="pc-empty" id="pc-empty">
+        <div class="pc-empty-icon">🤖</div>
+        <div class="pc-empty-title">Ask me about your watchlist</div>
+        <div class="pc-empty-sub">I can compare stocks, identify risks, highlight the strongest and weakest holdings, and explain sector exposure — all using your live AI analysis data.</div>
+      </div>
+    </div>
+
+    <!-- Suggested questions -->
+    <div class="pc-chips-wrap">
+      <div class="pc-chips-label">Suggested questions</div>
+      <div class="pc-chips" id="pc-chips">
+        <button class="pc-chip" onclick="pcSendChip(this)">Which stocks look strongest right now?</button>
+        <button class="pc-chip" onclick="pcSendChip(this)">Any stocks I should be worried about?</button>
+        <button class="pc-chip" onclick="pcSendChip(this)">Which of my stocks are overbought (RSI &gt; 70)?</button>
+        <button class="pc-chip" onclick="pcSendChip(this)">Summarise my watchlist health</button>
+        <button class="pc-chip" onclick="pcSendChip(this)">What's my sector exposure?</button>
+        <button class="pc-chip" onclick="pcSendChip(this)">Which stocks have the best fundamentals?</button>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="pc-input-row">
+      <textarea id="pc-input" placeholder="Ask about your watchlist — compare stocks, find risks, check sector exposure…" rows="1"
+        oninput="this.style.height='40px';this.style.height=Math.min(this.scrollHeight,90)+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPortfolioMessage();}"></textarea>
+      <button id="pc-send" onclick="sendPortfolioMessage()" title="Send">↑</button>
+    </div>
+    <div class="pc-foot">⚠️ For informational purposes only · Not SEBI-registered investment advice · Powered by Claude Sonnet AI</div>
+  </div>
+
 </div>
 
 <!-- ── APP SHELL ─────────────────────────────────────────────────────────── -->
@@ -2010,6 +2156,163 @@ function buildChatCtx() {
     fundamentals:{pe:fun.pe, forwardPE:fun.forwardPE, pbRatio:fun.pbRatio, roe:fun.roe, roce:fun.roce, eps:fun.eps, revenueGrowth:fun.revenueGrowth, earningsGrowth:fun.earningsGrowth, debtToEquity:fun.debtToEquity, operatingMargin:fun.operatingMargin, marketCapCr:fun.marketCapCr, targetPrice:fun.targetPrice, recommendation:fun.recommendation},
     lastUpdated:d.lastUpdated,
   };
+}
+
+// ── PORTFOLIO CHAT ────────────────────────────────────────────────────────────
+let _pcMsgs    = [];
+let _pcLoading = false;
+
+function showPortfolioChat() {
+  const page = document.getElementById('portfolio-chat-page');
+  page.style.display = 'flex';
+  page.style.flexDirection = 'column';
+  _renderPcHeader();
+  _renderPcNotice();
+  _renderPcMsgs();
+  setTimeout(() => document.getElementById('pc-input')?.focus(), 100);
+  logEvent('portfolio_chat_open', {});
+}
+
+function hidePortfolioChat() {
+  document.getElementById('portfolio-chat-page').style.display = 'none';
+}
+
+function _buildPortfolioCtx() {
+  const wl = getWatchlist();
+  const stored = getStoredData();
+  return wl.map(sym => {
+    const d = stored[sym];
+    if (!d) return { symbol: sym, name: sym };
+    return {
+      symbol:       d.symbol || sym,
+      name:         d.name   || sym,
+      sector:       d.sector || '',
+      signal:       d.signal || null,
+      price:        d.price  || {},
+      indicators:   d.aiIndicators  || {},
+      fundamentals: d.fundamentals  || {},
+      aiAnalysis:   d.aiAnalysis    || {},
+    };
+  });
+}
+
+function _renderPcHeader() {
+  const portfolio = _buildPortfolioCtx();
+  const analysed  = portfolio.filter(s => s.signal);
+  const buy    = analysed.filter(s => s.signal === 'BUY_MORE').length;
+  const hold   = analysed.filter(s => s.signal === 'HOLD').length;
+  const review = analysed.filter(s => s.signal === 'REVIEW').length;
+  const na     = portfolio.length - analysed.length;
+
+  const sub = document.getElementById('pc-subtitle');
+  if (sub) sub.textContent = portfolio.length + ' stocks tracked · ' + analysed.length + ' analysed';
+
+  const pills = document.getElementById('pc-signal-pills');
+  if (pills) {
+    let html = '';
+    if (buy)    html += '<span class="pc-pill pc-pill-buy">▲ ' + buy + ' Buy More</span>';
+    if (hold)   html += '<span class="pc-pill pc-pill-hold">● ' + hold + ' Hold</span>';
+    if (review) html += '<span class="pc-pill pc-pill-review">▼ ' + review + ' Review</span>';
+    if (na)     html += '<span class="pc-pill pc-pill-na">' + na + ' pending</span>';
+    pills.innerHTML = html;
+  }
+}
+
+function _renderPcNotice() {
+  const portfolio  = _buildPortfolioCtx();
+  const unanalysed = portfolio.filter(s => !s.signal).map(s => s.symbol);
+  const notice     = document.getElementById('pc-notice');
+  if (!notice) return;
+  if (unanalysed.length) {
+    notice.style.display = 'block';
+    notice.textContent = '⚠️ ' + unanalysed.length + ' stock' + (unanalysed.length > 1 ? 's' : '') +
+      ' not yet analysed: ' + unanalysed.join(', ') + '. Open each in your watchlist to run AI analysis first.';
+  } else {
+    notice.style.display = 'none';
+  }
+}
+
+function _renderPcMsgs() {
+  const container = document.getElementById('pc-msgs');
+  const empty     = document.getElementById('pc-empty');
+  if (!container) return;
+
+  if (_pcMsgs.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    Array.from(container.children).forEach(c => { if (c.id !== 'pc-empty') c.remove(); });
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  Array.from(container.children).forEach(c => { if (c.id !== 'pc-empty') c.remove(); });
+
+  _pcMsgs.forEach(function(m) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + m.role;
+    if (m.role === 'user') {
+      div.innerHTML = '<div class="chat-bubble">' + escCht(m.content) + '</div>' +
+                      '<div class="chat-msg-time">' + _pcFmtTime(m.ts) + '</div>';
+    } else {
+      div.innerHTML = '<div class="chat-bubble">' + fmtChtMd(m.content) + '</div>' +
+                      '<div class="chat-msg-time">' + _pcFmtTime(m.ts) + '</div>';
+    }
+    container.appendChild(div);
+  });
+
+  if (_pcLoading) {
+    const typing = document.createElement('div');
+    typing.className = 'chat-msg assistant';
+    typing.id = 'pc-typing';
+    typing.innerHTML = '<div class="chat-typing"><div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div></div>';
+    container.appendChild(typing);
+  }
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function _pcFmtTime(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function pcSendChip(btn) {
+  sendPortfolioMessage(btn.textContent.trim());
+}
+
+async function sendPortfolioMessage(prefill) {
+  const input = document.getElementById('pc-input');
+  const text  = (prefill || (input && input.value) || '').trim();
+  if (!text || _pcLoading) return;
+  if (input) { input.value = ''; input.style.height = '40px'; }
+
+  const sendBtn = document.getElementById('pc-send');
+  if (sendBtn) sendBtn.disabled = true;
+
+  logEvent('portfolio_chat_message', { message_length: text.length });
+
+  _pcMsgs.push({ role: 'user', content: text, ts: Date.now() });
+  _pcLoading = true;
+  _renderPcMsgs();
+
+  try {
+    const portfolio = _buildPortfolioCtx();
+    const res = await fetch(API_BASE + '/portfolio-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: _pcMsgs.map(function(m) { return { role: m.role, content: m.content }; }),
+        portfolioContext: portfolio,
+      }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    _pcMsgs.push({ role: 'assistant', content: data.content || 'No response received.', ts: Date.now() });
+  } catch (err) {
+    _pcMsgs.push({ role: 'assistant', content: 'Sorry, something went wrong. (' + err.message + ')', ts: Date.now() });
+  }
+
+  _pcLoading = false;
+  if (sendBtn) sendBtn.disabled = false;
+  _renderPcMsgs();
 }
 
 // ── MOBILE WATCHLIST DRAWER ───────────────────────────────────────────────────
