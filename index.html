@@ -2163,18 +2163,22 @@ let _pcMsgs    = [];
 let _pcLoading = false;
 
 function showPortfolioChat() {
+  logEvent('portfolio_chat_open', {});
+  _stopIndicesTicker();
+  document.getElementById('hub').style.display = 'none';
   const page = document.getElementById('portfolio-chat-page');
   page.style.display = 'flex';
   page.style.flexDirection = 'column';
   _renderPcHeader();
   _renderPcNotice();
   _renderPcMsgs();
-  setTimeout(() => document.getElementById('pc-input')?.focus(), 100);
-  logEvent('portfolio_chat_open', {});
+  setTimeout(function() { var inp = document.getElementById('pc-input'); if (inp) inp.focus(); }, 100);
 }
 
 function hidePortfolioChat() {
   document.getElementById('portfolio-chat-page').style.display = 'none';
+  document.getElementById('hub').style.display = 'block';
+  _startIndicesTicker();
 }
 
 function _buildPortfolioCtx() {
