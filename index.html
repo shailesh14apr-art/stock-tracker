@@ -247,7 +247,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 @keyframes loPulse{0%,100%{box-shadow:0 0 0 4px rgba(37,99,235,.35);}50%{box-shadow:0 0 0 8px rgba(37,99,235,.12);}}
 .lo-left-footer{position:relative;z-index:2;font-size:11px;color:rgba(100,116,139,.65);}
 .lo-right{width:460px;min-width:420px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;padding:40px 32px;position:relative;}
-.lo-card{width:100%;max-width:380px;background:#fff;border-radius:22px;padding:40px 36px 36px;box-shadow:0 20px 60px rgba(0,0,0,.14),0 4px 16px rgba(0,0,0,.08);border:1px solid #e2e8f0;animation:loSlideIn .55s cubic-bezier(.16,1,.3,1) both;}
+.lo-card{width:100%;max-width:380px;background:#fff;border-radius:22px;padding:40px 36px 36px;box-shadow:0 20px 60px rgba(0,0,0,.14),0 4px 16px rgba(0,0,0,.08);border:1px solid #e2e8f0;animation:loSlideIn .55s cubic-bezier(.16,1,.3,1) both;position:relative;}
 @keyframes loSlideIn{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
 @keyframes loFadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 .lo-card-icon{width:56px;height:56px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;box-shadow:0 2px 8px rgba(37,99,235,.15);}
@@ -577,7 +577,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .mob-wl-footer{padding:10px 8px;border-top:1px solid var(--border);flex-shrink:0;}
 /* ── MOBILE RESPONSIVE OVERRIDES ─────────────────────────────────────────── */
 @media(max-width:768px){
-  #mobile-nav{display:grid;}
+  #mobile-nav.bl-app-nav{display:grid;}
   #sidebar{display:none!important;}
   body{overflow:auto;height:auto;min-height:100dvh;}
   #main{height:auto;overflow-y:visible;padding-bottom:70px;}
@@ -967,6 +967,67 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   padding: 8px 12px; margin-bottom: 10px; line-height: 1.5; flex-shrink: 0;
 }
 
+/* ── LANDING NAV — HAMBURGER MENU ───────────────────────────────────────── */
+.lp-nav-right { display:flex; align-items:center; gap:16px; }
+.lp-nav-links { display:flex; gap:2px; align-items:center; }
+.lp-nav-links a {
+  font-size:13px; color:var(--text2); text-decoration:none; font-weight:500;
+  padding:10px 12px; border-radius:6px; min-height:44px; min-width:44px;
+  display:inline-flex; align-items:center; transition:color .15s,background .15s;
+}
+.lp-nav-links a:hover { color:var(--text); background:rgba(255,255,255,.06); }
+.lp-hamburger {
+  display:none; background:none; border:1px solid var(--border2);
+  color:var(--text); border-radius:8px; padding:0 10px; cursor:pointer;
+  font-size:20px; line-height:1; height:40px; min-width:44px;
+  align-items:center; justify-content:center; flex-shrink:0;
+  transition:background .15s; -webkit-tap-highlight-color:transparent;
+}
+.lp-hamburger:hover { background:rgba(255,255,255,.08); }
+.lp-mob-menu {
+  display:none; position:absolute; top:100%; left:0; right:0;
+  background:rgba(10,18,34,.97); border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  padding:10px 16px 16px; flex-direction:column; gap:2px; z-index:99;
+}
+.lp-mob-menu.open { display:flex; }
+.lp-mob-menu a {
+  display:flex; align-items:center;
+  padding:12px 16px; color:var(--text2); text-decoration:none;
+  font-size:14px; font-weight:500; border-radius:8px; min-height:44px;
+  transition:all .15s;
+}
+.lp-mob-menu a:hover { background:rgba(255,255,255,.07); color:var(--text); }
+.lp-mob-menu-divider { height:1px; background:var(--border); margin:8px 0; }
+.lp-mob-menu .lp-nav-signin,.lp-mob-menu .lp-nav-cta {
+  width:100%; text-align:center; margin:0; padding:11px; justify-content:center;
+}
+@media(max-width:640px) {
+  .lp-nav-links,.lp-nav-signin { display:none !important; }
+  .lp-hamburger { display:flex; }
+}
+
+/* ── LOGIN OVERLAY — CLOSE BUTTON ───────────────────────────────────────── */
+.lo-close-btn {
+  position:absolute; top:12px; right:12px; background:none; border:none;
+  color:#94a3b8; font-size:20px; cursor:pointer; padding:6px 8px;
+  border-radius:8px; line-height:1; transition:all .15s; z-index:1;
+  min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center;
+}
+.lo-close-btn:hover { background:#f1f5f9; color:#334155; }
+
+/* ── FOOTER — TAP TARGETS ───────────────────────────────────────────────── */
+.lp-footer-link {
+  font-size:11px; color:var(--text3); text-decoration:none;
+  display:inline-flex; align-items:center; min-height:44px; padding:0 8px;
+  border-radius:6px; transition:color .15s;
+}
+.lp-footer-link:hover { color:var(--text2); }
+.lp-footer-copy-text {
+  font-size:11px; color:var(--text3);
+  display:inline-flex; align-items:center; min-height:44px;
+}
+
 </style>
 </head>
 <body>
@@ -975,20 +1036,29 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div id="landing">
 
   <!-- Navbar -->
-  <nav class="lp-nav">
+  <nav class="lp-nav" style="position:relative;">
     <div class="lp-nav-inner">
       <div class="lp-brand">
         📈 <span>Bazaar</span><span class="lp-brand-accent">Lens</span>
         <span class="lp-brand-badge">Beta</span>
       </div>
-      <div style="display:flex;align-items:center;gap:16px;">
-        <nav style="display:flex;gap:20px;" aria-label="Landing navigation">
-          <a href="#lp-features" style="font-size:13px;color:var(--text2);text-decoration:none;font-weight:500;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">Features</a>
-          <a href="#lp-how" style="font-size:13px;color:var(--text2);text-decoration:none;font-weight:500;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">How it works</a>
+      <div class="lp-nav-right">
+        <nav class="lp-nav-links" aria-label="Landing navigation">
+          <a href="#lp-features" onclick="closeLpMenu()">Features</a>
+          <a href="#lp-how" onclick="closeLpMenu()">How it works</a>
         </nav>
         <button class="lp-nav-signin" onclick="showLoginFromLanding('signin')">Sign In</button>
         <button class="lp-nav-cta" onclick="showLoginFromLanding('signup')">Start for Free →</button>
       </div>
+      <button class="lp-hamburger" id="lp-hamburger" aria-label="Open menu" aria-expanded="false" onclick="toggleLpMenu()">☰</button>
+    </div>
+    <!-- Mobile nav drawer -->
+    <div class="lp-mob-menu" id="lp-mob-menu" aria-hidden="true">
+      <a href="#lp-features" onclick="closeLpMenu()">Features</a>
+      <a href="#lp-how" onclick="closeLpMenu()">How it works</a>
+      <div class="lp-mob-menu-divider"></div>
+      <button class="lp-nav-signin" onclick="closeLpMenu();showLoginFromLanding('signin')">Sign In</button>
+      <button class="lp-nav-cta" onclick="closeLpMenu();showLoginFromLanding('signup')">Start for Free →</button>
     </div>
   </nav>
 
@@ -1140,11 +1210,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="lp-footer-inner">
       <div class="lp-footer-brand">📈 BazaarLens</div>
       <div class="lp-footer-disc">⚠️ BazaarLens provides AI-generated analysis for informational purposes only and does not constitute investment advice. BazaarLens is <strong>not a SEBI-registered investment adviser</strong>. Consult a SEBI-registered investment advisor before making any investment decisions. Past performance does not guarantee future results.</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-        <a href="/privacy" style="font-size:11px;color:var(--text3);text-decoration:none;" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">Privacy Policy</a>
-        <a href="/terms" style="font-size:11px;color:var(--text3);text-decoration:none;" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">Terms of Service</a>
-        <a href="mailto:hello@bazaarlens.in" style="font-size:11px;color:var(--text3);text-decoration:none;" onmouseover="this.style.color='var(--text2)'" onmouseout="this.style.color='var(--text3)'">Contact</a>
-        <span style="font-size:11px;color:var(--text3);">© 2026 BazaarLens</span>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+        <a href="/privacy" class="lp-footer-link">Privacy Policy</a>
+        <a href="/terms" class="lp-footer-link">Terms of Service</a>
+        <a href="mailto:hello@bazaarlens.in" class="lp-footer-link">Contact</a>
+        <span class="lp-footer-copy-text">© 2026 BazaarLens</span>
       </div>
     </div>
   </footer>
@@ -1154,7 +1224,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 
 <!-- ── LOGIN OVERLAY — SPLIT SCREEN ─────────────────────────────────────── -->
-<div id="login-overlay" class="hidden">
+<div id="login-overlay" class="hidden" onclick="handleLoginOverlayClick(event)">
   <div class="lo-left">
     <div class="lo-brand">
       <div class="lo-brand-icon">📈</div>
@@ -1179,6 +1249,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   </div>
   <div class="lo-right">
     <div class="lo-card">
+      <button class="lo-close-btn" onclick="dismissLogin()" aria-label="Close">✕</button>
       <div class="lo-card-icon">📈</div>
       <div class="lo-card-head"><h2>Welcome back</h2><p>Sign in to your watchlist</p></div>
       <div class="lo-email-sent" id="lo-email-sent">
@@ -1497,6 +1568,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 function showLanding() {
   document.getElementById('landing').style.display = 'block';
   document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('mobile-nav').classList.remove('bl-app-nav');
+  closeLpMenu();
   // Replace history state so back-button from login returns here
   try { history.replaceState({ bl_page: 'landing' }, '', '/'); } catch(_) {}
 }
@@ -1515,6 +1588,43 @@ function showLoginFromLanding(mode) {
     loSwitchToSignin({ preventDefault: () => {} });
   }
 }
+// ── LOGIN OVERLAY DISMISS ──────────────────────────────────────────────────
+function dismissLogin() {
+  if (_currentUser) return;
+  const overlay = document.getElementById('login-overlay');
+  overlay.classList.add('hidden');
+  showLanding();
+}
+function handleLoginOverlayClick(e) {
+  if (e.target === document.getElementById('login-overlay')) dismissLogin();
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('login-overlay');
+    if (overlay && !overlay.classList.contains('hidden')) dismissLogin();
+  }
+});
+
+// ── HAMBURGER MENU ────────────────────────────────────────────────────────
+function toggleLpMenu() {
+  const menu = document.getElementById('lp-mob-menu');
+  const btn  = document.getElementById('lp-hamburger');
+  if (!menu || !btn) return;
+  const open = menu.classList.toggle('open');
+  menu.setAttribute('aria-hidden', String(!open));
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = open ? '✕' : '☰';
+}
+function closeLpMenu() {
+  const menu = document.getElementById('lp-mob-menu');
+  const btn  = document.getElementById('lp-hamburger');
+  if (!menu || !btn) return;
+  menu.classList.remove('open');
+  menu.setAttribute('aria-hidden', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.textContent = '☰';
+}
+
 // Handle browser back button — restore landing page when user presses ←
 window.addEventListener('popstate', function(e) {
   const landing = document.getElementById('landing');
@@ -1650,7 +1760,11 @@ function _stopIndicesTicker() {
 }
 
 // ── HUB NAVIGATION ─────────────────────────────────────────────────────────────
-function showHub() { document.getElementById('hub').style.display = 'block'; _startIndicesTicker(); }
+function showHub() {
+  document.getElementById('hub').style.display = 'block';
+  document.getElementById('mobile-nav').classList.add('bl-app-nav');
+  _startIndicesTicker();
+}
 
 async function showApp() {
   logEvent('app_opened',{source:'hub'});
