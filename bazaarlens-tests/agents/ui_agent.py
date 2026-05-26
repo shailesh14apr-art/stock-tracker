@@ -50,7 +50,13 @@ def bypass_auth_and_show_app(page):
     page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }")
 
 
+def bypass_auth_and_show_hub(page):
+    """Show the Hub page (indices, welcome screen) without full Firebase auth."""
+    page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showHub === 'function') showHub(); }")
+
+
 def bypass_auth_and_trigger_analysis(page, symbol):
+    """Hide landing, show app, then trigger a live analysis via the API."""
     page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }")
     page.wait_for_timeout(3000)
     page.evaluate(f"() => typeof triggerAnalysis === 'function' && triggerAnalysis('{symbol}')")
@@ -150,17 +156,41 @@ def test_localstorage_cache(page, base_url, symbol, vp):
     )
 
 
+def test_indices_visible(page, base_url, api_key, vp):
+    """
+    Indices live in the Hub page (#hub-indices), not the landing page.
+    Must bypass auth and call showHub() to see them — otherwise the
+    landing page is shown and indices never load.
+    """
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    bypass_auth_and_show_hub(page)
+    # Give indices API time to fetch (called by _startIndicesTicker)
+    page.wait_for_timeout(8000)
+    ss = screenshot_b64(page)
+    ok, reason = claude_assert(ss, api_key=api_key, question=(
+        "Does this page show Indian stock market index values such as Nifty 50 or Sensex with numeric prices? "
+        "Answer true only if you can see actual numbers next to index names, not placeholder dashes."
+    ))
+    return make_result(
+        f"[{vp}] Market indices visible in Hub",
+        "pass" if ok else "fail",
+        "pass" if ok else "medium",
+        "Nifty/Sensex should appear in #hub after showHub() + 8s wait",
+        reason, "Index values with numbers visible"
+    )
+
+
 # ── Desktop-only tests ────────────────────────────────────────────────────────
 
 def test_theme_toggle_desktop(page, base_url):
-    """Desktop: theme toggle is in the sidebar (#theme-toggle)."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); }")
     page.wait_for_timeout(500)
     initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
     toggle = page.locator("#theme-toggle").first
     if toggle.count() == 0:
-        return make_result("Theme toggle", "fail", "low", "No #theme-toggle found", "not found", "#theme-toggle present")
+        return make_result("[desktop] Theme toggle", "fail", "low",
+                           "No #theme-toggle found", "not found", "#theme-toggle present")
     toggle.click()
     page.wait_for_timeout(300)
     new_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
@@ -170,20 +200,17 @@ def test_theme_toggle_desktop(page, base_url):
         "pass" if ok else "fail",
         "pass" if ok else "medium",
         "Click #theme-toggle → data-theme should change",
-        f"{initial_theme} → {new_theme}",
-        "theme attribute changes"
+        f"{initial_theme} → {new_theme}", "theme attribute changes"
     )
 
 
 def test_add_stock_desktop(page, base_url, symbol):
-    """Desktop: sidebar is visible, + Add Stock button is in sidebar footer."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     bypass_auth_and_show_app(page)
     page.wait_for_timeout(3000)
-
     add_btn = page.locator("button.add-btn").first
     if add_btn.count() == 0 or not add_btn.is_visible():
         return make_result(f"[desktop] Add stock ({symbol})", "fail", "critical",
@@ -209,7 +236,6 @@ def test_add_stock_desktop(page, base_url, symbol):
 
 
 def test_remove_stock_desktop(page, base_url, symbol):
-    """Desktop: remove button is on each sidebar stock card."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
@@ -224,7 +250,7 @@ def test_remove_stock_desktop(page, base_url, symbol):
     page.wait_for_timeout(500)
     gone = page.locator("#watchlist-container").filter(has_text=symbol).count() == 0
     return make_result(
-        f"[desktop] Remove stock — card disappears",
+        "[desktop] Remove stock — card disappears",
         "pass" if gone else "fail",
         "pass" if gone else "medium",
         "Click .remove-btn → stock card removed from sidebar",
@@ -232,76 +258,154 @@ def test_remove_stock_desktop(page, base_url, symbol):
     )
 
 
-def test_indices_visible(page, base_url, api_key, vp):
+# ── Mobile-only tests ─────────────────────────────────────────────────────────
+
+def test_mobile_no_horizontal_scroll(page, base_url):
+    """
+    Measures actual DOM scroll width vs viewport width using JavaScript.
+    Claude screenshots can't detect horizontal overflow — only JS can.
+    Checks both the landing page and the app shell.
+    """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-    page.wait_for_timeout(5000)
-    ss = screenshot_b64(page)
-    ok, reason = claude_assert(ss, api_key=api_key, question=(
-        "Does this page show Indian stock market index values such as Nifty 50, Sensex, or Bank Nifty with numbers? "
-        "Answer true if any market index with a numeric value is visible."
-    ))
+    page.wait_for_timeout(2000)
+
+    # Check landing page overflow
+    landing_overflow = page.evaluate("""() => {
+        const body = document.body;
+        const html = document.documentElement;
+        const viewportWidth = window.innerWidth;
+        const scrollWidth = Math.max(
+            body.scrollWidth, body.offsetWidth,
+            html.scrollWidth, html.offsetWidth
+        );
+        return {
+            viewportWidth: viewportWidth,
+            scrollWidth: scrollWidth,
+            hasOverflow: scrollWidth > viewportWidth + 2
+        };
+    }""")
+
+    # Also check app view
+    bypass_auth_and_show_app(page)
+    page.wait_for_timeout(3000)
+    app_overflow = page.evaluate("""() => {
+        const body = document.body;
+        const html = document.documentElement;
+        const viewportWidth = window.innerWidth;
+        const scrollWidth = Math.max(
+            body.scrollWidth, body.offsetWidth,
+            html.scrollWidth, html.offsetWidth
+        );
+        return {
+            viewportWidth: viewportWidth,
+            scrollWidth: scrollWidth,
+            hasOverflow: scrollWidth > viewportWidth + 2
+        };
+    }""")
+
+    landing_ok = not landing_overflow["hasOverflow"]
+    app_ok     = not app_overflow["hasOverflow"]
+    ok         = landing_ok and app_ok
+
+    detail = (
+        f"Landing: viewport={landing_overflow['viewportWidth']}px scroll={landing_overflow['scrollWidth']}px | "
+        f"App: viewport={app_overflow['viewportWidth']}px scroll={app_overflow['scrollWidth']}px"
+    )
     return make_result(
-        f"[{vp}] Market indices visible",
+        "[mobile] No horizontal scrolling required",
         "pass" if ok else "fail",
-        "pass" if ok else "medium",
-        "Nifty/Sensex should appear on landing/hub page",
-        reason, "Index values visible"
+        "pass" if ok else "high",
+        "scrollWidth should not exceed viewportWidth on any page at 390px",
+        detail,
+        "scrollWidth <= viewportWidth on landing and app"
     )
 
 
-# ── Mobile-only tests ─────────────────────────────────────────────────────────
-
-def test_mobile_bottom_nav(page, base_url):
-    """Mobile: #mobile-nav bottom bar should be visible (display:grid at ≤768px)."""
+def test_mobile_bottom_nav_fixed(page, base_url):
+    """
+    Verifies the bottom nav is:
+    1. Visible without scrolling (in viewport on page load)
+    2. Fixed to the bottom (position:fixed, not position:static/relative)
+    3. Not hidden behind content — getBoundingClientRect().bottom <= window.innerHeight
+    """
     page.goto(base_url, wait_until="networkidle", timeout=30000)
-    nav_visible = page.locator("#mobile-nav").is_visible()
-    sidebar_visible = page.locator("#sidebar").is_visible()
+    page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    bypass_auth_and_show_app(page)
+    page.wait_for_timeout(2000)
+
+    nav_info = page.evaluate("""() => {
+        const nav = document.getElementById('mobile-nav');
+        if (!nav) return { found: false };
+        const rect = nav.getBoundingClientRect();
+        const style = window.getComputedStyle(nav);
+        return {
+            found: true,
+            position: style.position,
+            display: style.display,
+            rectTop: Math.round(rect.top),
+            rectBottom: Math.round(rect.bottom),
+            viewportHeight: window.innerHeight,
+            visibleWithoutScroll: rect.bottom <= window.innerHeight && rect.top >= 0,
+            isFixed: style.position === 'fixed'
+        };
+    }""")
+
+    if not nav_info.get("found"):
+        return make_result("[mobile] Bottom nav — fixed position", "fail", "high",
+                           "#mobile-nav element not found in DOM", "not found", "#mobile-nav exists")
+
+    is_fixed   = nav_info["isFixed"]
+    in_viewport = nav_info["visibleWithoutScroll"]
+    ok = is_fixed and in_viewport
+
+    actual = (
+        f"position={nav_info['position']}, "
+        f"rect.bottom={nav_info['rectBottom']}px, "
+        f"viewportHeight={nav_info['viewportHeight']}px, "
+        f"visibleWithoutScroll={in_viewport}"
+    )
     return make_result(
-        "[mobile] Bottom nav visible, sidebar hidden",
-        "pass" if (nav_visible and not sidebar_visible) else "fail",
-        "pass" if (nav_visible and not sidebar_visible) else "high",
-        "At 390px: #mobile-nav should show, #sidebar should be hidden",
-        f"nav={nav_visible}, sidebar={sidebar_visible}",
-        "mobile-nav visible, sidebar hidden"
+        "[mobile] Bottom nav — fixed and visible without scrolling",
+        "pass" if ok else "fail",
+        "pass" if ok else "high",
+        "#mobile-nav must be position:fixed and within viewport on page load (no scroll needed)",
+        actual,
+        "position=fixed, rect.bottom <= viewportHeight"
     )
 
 
 def test_mobile_watchlist_drawer(page, base_url, symbol):
-    """Mobile: tapping the Watchlist nav button opens the drawer."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     bypass_auth_and_show_app(page)
     page.wait_for_timeout(3000)
-
     wl_btn = page.locator("#nav-btn-watchlist").first
     if wl_btn.count() == 0:
         return make_result("[mobile] Watchlist drawer", "fail", "high",
-                           "#nav-btn-watchlist not found in bottom nav", "not found", "button present")
+                           "#nav-btn-watchlist not found", "not found", "button present")
     wl_btn.click()
     page.wait_for_timeout(800)
-    drawer = page.locator("#mob-wl-drawer")
-    drawer_open = "open" in (drawer.get_attribute("class") or "")
+    drawer_open = "open" in (page.locator("#mob-wl-drawer").get_attribute("class") or "")
     return make_result(
         "[mobile] Watchlist drawer opens on tap",
         "pass" if drawer_open else "fail",
         "pass" if drawer_open else "high",
         "Tap #nav-btn-watchlist → #mob-wl-drawer should have class 'open'",
-        f"drawer has 'open' class: {drawer_open}",
-        "drawer opens"
+        f"drawer open: {drawer_open}", "drawer opens"
     )
 
 
 def test_mobile_add_stock(page, base_url, symbol):
-    """Mobile: + Add button is in the bottom nav."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     bypass_auth_and_show_app(page)
     page.wait_for_timeout(3000)
-
     add_btn = page.locator("#nav-btn-add").first
     if add_btn.count() == 0:
         return make_result(f"[mobile] Add stock ({symbol})", "fail", "critical",
@@ -310,9 +414,8 @@ def test_mobile_add_stock(page, base_url, symbol):
     page.wait_for_timeout(500)
     modal_open = "open" in (page.locator("#modal").get_attribute("class") or "")
     if not modal_open:
-        return make_result(f"[mobile] Add stock — modal opens", "fail", "critical",
-                           "Tap #nav-btn-add → modal should open", f"modal open: {modal_open}", "modal open")
-
+        return make_result("[mobile] Add stock — modal opens", "fail", "critical",
+                           "Tap #nav-btn-add → modal should open", f"open={modal_open}", "modal open")
     page.locator("#modal-search").fill(symbol)
     page.wait_for_timeout(800)
     first = page.locator("#modal-list .modal-stock-item").first
@@ -321,8 +424,6 @@ def test_mobile_add_stock(page, base_url, symbol):
     else:
         page.locator("#modal-search").press("Enter")
     page.wait_for_timeout(2000)
-
-    # On mobile, watchlist is in the drawer — check mob-wl-list
     page.locator("#nav-btn-watchlist").click()
     page.wait_for_timeout(800)
     visible = page.locator("#mob-wl-list").filter(has_text=symbol).count() > 0
@@ -336,21 +437,22 @@ def test_mobile_add_stock(page, base_url, symbol):
 
 
 def test_mobile_layout(page, base_url, api_key):
-    """Mobile: overall layout should look like a proper mobile app, not a squished desktop."""
+    """Visual check via Claude screenshot — catches layout issues not measurable in JS."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.wait_for_timeout(3000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
-        "Does this page look like a properly designed mobile app layout? "
-        "Look for: readable text (not tiny), no horizontal overflow, "
-        "a bottom navigation bar or mobile-friendly navigation. "
-        "Answer false if content is cut off or looks like a squished desktop site."
+        "Does this page look like a properly designed mobile app layout at 390px width? "
+        "Check: text is readable (not tiny), there is no obvious content cut off on the right edge, "
+        "and the layout uses full width sensibly. "
+        "Answer false if you see a horizontal scrollbar, content bleeding off the right edge, "
+        "or text too small to read comfortably."
     ))
     return make_result(
-        "[mobile] Layout — mobile-friendly rendering",
+        "[mobile] Layout — visually mobile-friendly",
         "pass" if ok else "fail",
         "pass" if ok else "high",
-        "Page should render correctly at 390px mobile width",
+        "Page should render correctly at 390px — no cut-off, no tiny text",
         reason, "Mobile-friendly layout"
     )
 
@@ -418,9 +520,10 @@ def ui_agent(state: AgentState) -> dict:
         mobile_tests = [
             lambda: test_no_js_errors(mp, base_url, "mobile"),
             lambda: test_page_loads(mp, base_url, "mobile"),
+            lambda: test_mobile_no_horizontal_scroll(mp, base_url),
+            lambda: test_mobile_bottom_nav_fixed(mp, base_url),
             lambda: test_mobile_layout(mp, base_url, api_key),
             lambda: test_indices_visible(mp, base_url, api_key, "mobile"),
-            lambda: test_mobile_bottom_nav(mp, base_url),
             lambda: test_mobile_watchlist_drawer(mp, base_url, symbol),
             lambda: test_mobile_add_stock(mp, base_url, symbol),
             lambda: test_chart_renders(mp, base_url, symbol, api_key, "mobile"),
