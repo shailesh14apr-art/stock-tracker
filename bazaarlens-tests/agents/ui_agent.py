@@ -1,7 +1,7 @@
 """
 UI Test Agent — BazaarLens
-Playwright browser automation with Claude visual assertions.
-Every locator is on a single line to avoid IndentationError in all Python versions.
+Tests both desktop (1280x800) and mobile (390x844) viewports.
+Mobile uses a completely different UI: bottom nav, watchlist drawer, no sidebar.
 """
 import base64
 import json
@@ -10,6 +10,11 @@ from state import AgentState, TestResult
 
 ANTHROPIC_API = "https://api.anthropic.com/v1/messages"
 CLAUDE_MODEL  = "claude-sonnet-4-20250514"
+
+VIEWPORTS = {
+    "desktop": {"width": 1280, "height": 800},
+    "mobile":  {"width": 390,  "height": 844},   # iPhone 14 Pro
+}
 
 
 def make_result(test_name, status, severity, detail, actual, expected):
@@ -42,50 +47,39 @@ def claude_assert(b64, question, api_key):
 
 
 def bypass_auth_and_show_app(page):
-    """
-    Common helper: hide landing page, show the app shell.
-    Called by every test that needs the main UI rather than the landing page.
-    """
     page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }")
 
 
 def bypass_auth_and_trigger_analysis(page, symbol):
-    """
-    Common helper: hide landing, show app, then trigger a live analysis.
-    Used by tests that need actual analysis data (charts, AI card, cache).
-    showApp() only shows 'No analysis yet' if no cached data exists —
-    we must call triggerAnalysis() explicitly to kick off the API call.
-    """
     page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); if (typeof showApp === 'function') showApp(); }")
     page.wait_for_timeout(3000)
     page.evaluate(f"() => typeof triggerAnalysis === 'function' && triggerAnalysis('{symbol}')")
 
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
+# ── Shared tests (run on both viewports) ──────────────────────────────────────
 
-def test_no_js_errors(page, base_url):
-    """Catch JS syntax errors that break the entire page."""
+def test_no_js_errors(page, base_url, vp):
     errors = []
     page.on("pageerror", lambda err: errors.append(str(err)))
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.wait_for_timeout(2000)
     ok = len(errors) == 0
     return make_result(
-        "No JavaScript errors on load",
+        f"[{vp}] No JavaScript errors on load",
         "pass" if ok else "fail",
         "pass" if ok else "critical",
-        "window.onerror / pageerror should be empty on load",
+        "pageerror should be empty on load",
         "; ".join(errors) if errors else "none",
         "zero JS errors"
     )
 
 
-def test_page_loads(page, base_url):
+def test_page_loads(page, base_url, vp):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     title = page.title()
     ok = "BazaarLens" in title
     return make_result(
-        "Page load — title contains BazaarLens",
+        f"[{vp}] Page load — title correct",
         "pass" if ok else "fail",
         "pass" if ok else "critical",
         f"GET {base_url} and check <title>",
@@ -94,109 +88,28 @@ def test_page_loads(page, base_url):
     )
 
 
-def test_theme_toggle(page, base_url):
-    """
-    Hide the landing page first — its z-index:500 covers the sidebar theme button.
-    Uses #theme-toggle ID to avoid matching the 3 buttons sharing .theme-toggle class.
-    """
-    page.goto(base_url, wait_until="networkidle", timeout=30000)
-    # Must hide landing before interacting with app shell elements
-    page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); }")
-    page.wait_for_timeout(500)
-    initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-    toggle = page.locator("#theme-toggle").first
-    if toggle.count() == 0:
-        return make_result("Theme toggle", "fail", "low", "No #theme-toggle element found", "not found", "#theme-toggle present")
-    toggle.click()
-    page.wait_for_timeout(300)
-    new_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-    ok = initial_theme != new_theme
-    return make_result(
-        "Theme toggle — switches dark/light",
-        "pass" if ok else "fail",
-        "pass" if ok else "medium",
-        "Click #theme-toggle → data-theme attribute should change",
-        f"{initial_theme} → {new_theme}",
-        "theme attribute changes"
-    )
-
-
-def test_add_stock(page, base_url, symbol="RELIANCE"):
-    """
-    Bypass Firebase auth via localStorage injection, then show the app.
-    Opens Add Stock modal and verifies the symbol appears in the sidebar.
-    Does NOT trigger analysis — just tests the modal + watchlist add flow.
-    """
-    page.goto(base_url, wait_until="networkidle", timeout=30000)
-    page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
-    page.reload(wait_until="networkidle")
-    page.wait_for_timeout(2000)
-    bypass_auth_and_show_app(page)
-    page.wait_for_timeout(3000)
-
-    add_btn = page.locator("button.add-btn").first
-    if add_btn.count() == 0 or not add_btn.is_visible():
-        return make_result(
-            f"Add stock — modal opens ({symbol})",
-            "fail", "critical",
-            "Could not find .add-btn after hideLanding()+showApp()",
-            "button not found", ".add-btn visible"
-        )
-    add_btn.click()
-    page.wait_for_timeout(500)
-
-    search = page.locator("#modal-search")
-    search.fill(symbol)
-    page.wait_for_timeout(800)
-
-    first_result = page.locator("#modal-list .modal-stock-item").first
-    if first_result.count() > 0:
-        first_result.click()
-    else:
-        search.press("Enter")
-
-    page.wait_for_timeout(2000)
-    card = page.locator("#watchlist-container").filter(has_text=symbol).first
-    visible = card.count() > 0
-    return make_result(
-        f"Add stock — {symbol} appears in sidebar",
-        "pass" if visible else "fail",
-        "pass" if visible else "critical",
-        f"Click '+ Add Stock', type '{symbol}', click result → card in sidebar",
-        f"card visible: {visible}",
-        "stock card visible in sidebar"
-    )
-
-
-def test_chart_renders(page, base_url, symbol, api_key):
-    """
-    Injects watchlist, triggers a live analysis (required — showApp alone shows
-    'No analysis yet' if no cache exists), then waits for chart to appear.
-    """
+def test_chart_renders(page, base_url, symbol, api_key, vp):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     bypass_auth_and_trigger_analysis(page, symbol)
-    page.wait_for_timeout(35000)   # wait for full API call + chart render
+    page.wait_for_timeout(35000)
     ss = screenshot_b64(page)
     ok, reason = claude_assert(ss, api_key=api_key, question=(
-        "Does this page show a financial chart — candlestick, line, or price chart with date x-axis? "
+        "Does this page show a financial chart — candlestick, line, or price chart with a date x-axis? "
         "Answer true if any chart is visible, false if only loading spinners or empty state."
     ))
     return make_result(
-        f"Chart renders — visible after analysis ({symbol})",
+        f"[{vp}] Chart renders after analysis",
         "pass" if ok else "fail",
         "pass" if ok else "high",
-        "Price chart should appear after triggerAnalysis() completes",
+        f"Price chart should appear after triggerAnalysis('{symbol}')",
         reason, "Chart visible"
     )
 
 
-def test_analysis_card_renders(page, base_url, symbol, api_key):
-    """
-    Triggers a live analysis and checks the AI scorecard shows BUY MORE/HOLD/REVIEW.
-    """
+def test_analysis_card_renders(page, base_url, symbol, api_key, vp):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
@@ -209,7 +122,7 @@ def test_analysis_card_renders(page, base_url, symbol, api_key):
         "Answer true if one of these three words is prominently visible."
     ))
     return make_result(
-        f"AI analysis card — signal rendered ({symbol})",
+        f"[{vp}] AI analysis card — signal visible",
         "pass" if ok else "fail",
         "pass" if ok else "high",
         "AI scorecard should show BUY_MORE / HOLD / REVIEW after analysis",
@@ -217,67 +130,109 @@ def test_analysis_card_renders(page, base_url, symbol, api_key):
     )
 
 
-def test_localstorage_cache(page, base_url, symbol):
-    """
-    Triggers analysis and checks localStorage for a cache entry.
-    Cache is only written AFTER a successful analysis completes.
-    """
+def test_localstorage_cache(page, base_url, symbol, vp):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     bypass_auth_and_trigger_analysis(page, symbol)
-    page.wait_for_timeout(40000)   # extra time for cache to be written
-    cache_keys = page.evaluate(
-        f"() => Object.keys(localStorage).filter(k => k.toLowerCase().includes('{symbol.lower()}') || k === 'stockData')"
+    page.wait_for_timeout(40000)
+    stock_data_present = page.evaluate(
+        f"() => {{ try {{ return JSON.parse(localStorage.getItem('stockData') || '{{}}')['{symbol}'] != null; }} catch(e) {{ return false; }} }}"
     )
-    # Also check stockData key which is where storeAnalysis() writes
-    stock_data = page.evaluate(
-        f"() => {{ try {{ const d = JSON.parse(localStorage.getItem('stockData') || '{{}}'); return d['{symbol}'] != null; }} catch(e) {{ return false; }} }}"
-    )
-    ok = stock_data or len(cache_keys) > 0
     return make_result(
-        f"localStorage cache — entry created ({symbol})",
-        "pass" if ok else "fail",
-        "pass" if ok else "medium",
-        "storeAnalysis() should write to localStorage.stockData after analysis",
-        f"stockData[{symbol}] present: {stock_data}, keys: {cache_keys or 'none'}",
+        f"[{vp}] localStorage cache written after analysis",
+        "pass" if stock_data_present else "fail",
+        "pass" if stock_data_present else "medium",
+        "storeAnalysis() should write to localStorage.stockData",
+        f"stockData[{symbol}] present: {stock_data_present}",
         f"stockData[{symbol}] exists"
     )
 
 
-def test_remove_stock(page, base_url, symbol):
+# ── Desktop-only tests ────────────────────────────────────────────────────────
+
+def test_theme_toggle_desktop(page, base_url):
+    """Desktop: theme toggle is in the sidebar (#theme-toggle)."""
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    page.evaluate("() => { if (typeof hideLanding === 'function') hideLanding(); }")
+    page.wait_for_timeout(500)
+    initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+    toggle = page.locator("#theme-toggle").first
+    if toggle.count() == 0:
+        return make_result("Theme toggle", "fail", "low", "No #theme-toggle found", "not found", "#theme-toggle present")
+    toggle.click()
+    page.wait_for_timeout(300)
+    new_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+    ok = initial_theme != new_theme
+    return make_result(
+        "[desktop] Theme toggle — switches dark/light",
+        "pass" if ok else "fail",
+        "pass" if ok else "medium",
+        "Click #theme-toggle → data-theme should change",
+        f"{initial_theme} → {new_theme}",
+        "theme attribute changes"
+    )
+
+
+def test_add_stock_desktop(page, base_url, symbol):
+    """Desktop: sidebar is visible, + Add Stock button is in sidebar footer."""
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    bypass_auth_and_show_app(page)
+    page.wait_for_timeout(3000)
+
+    add_btn = page.locator("button.add-btn").first
+    if add_btn.count() == 0 or not add_btn.is_visible():
+        return make_result(f"[desktop] Add stock ({symbol})", "fail", "critical",
+                           "Could not find .add-btn in sidebar", "not found", ".add-btn visible")
+    add_btn.click()
+    page.wait_for_timeout(500)
+    page.locator("#modal-search").fill(symbol)
+    page.wait_for_timeout(800)
+    first = page.locator("#modal-list .modal-stock-item").first
+    if first.count() > 0:
+        first.click()
+    else:
+        page.locator("#modal-search").press("Enter")
+    page.wait_for_timeout(2000)
+    visible = page.locator("#watchlist-container").filter(has_text=symbol).count() > 0
+    return make_result(
+        f"[desktop] Add stock — {symbol} in sidebar",
+        "pass" if visible else "fail",
+        "pass" if visible else "critical",
+        "Add Stock modal → symbol appears in sidebar watchlist",
+        f"visible: {visible}", "stock card in sidebar"
+    )
+
+
+def test_remove_stock_desktop(page, base_url, symbol):
+    """Desktop: remove button is on each sidebar stock card."""
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
     page.reload(wait_until="networkidle")
     page.wait_for_timeout(2000)
     bypass_auth_and_show_app(page)
     page.wait_for_timeout(3000)
-
     remove_btn = page.locator("#watchlist-container .remove-btn").first
     if remove_btn.count() == 0:
-        return make_result(
-            f"Remove stock — button exists ({symbol})",
-            "fail", "medium",
-            "Could not find .remove-btn on any stock card",
-            "remove button not found", ".remove-btn visible on card"
-        )
+        return make_result(f"[desktop] Remove stock ({symbol})", "fail", "medium",
+                           ".remove-btn not found on stock card", "not found", ".remove-btn present")
     remove_btn.click()
     page.wait_for_timeout(500)
-    still_visible = page.locator("#watchlist-container").filter(has_text=symbol).count() > 0
-    ok = not still_visible
+    gone = page.locator("#watchlist-container").filter(has_text=symbol).count() == 0
     return make_result(
-        f"Remove stock — card disappears ({symbol})",
-        "pass" if ok else "fail",
-        "pass" if ok else "medium",
-        "After clicking .remove-btn, stock card should disappear",
-        f"still visible: {still_visible}",
-        "card removed from sidebar"
+        f"[desktop] Remove stock — card disappears",
+        "pass" if gone else "fail",
+        "pass" if gone else "medium",
+        "Click .remove-btn → stock card removed from sidebar",
+        f"gone: {gone}", "card removed"
     )
 
 
-def test_indices_visible(page, base_url, api_key):
-    """Indices appear on the Hub page — no auth bypass needed."""
+def test_indices_visible(page, base_url, api_key, vp):
     page.goto(base_url, wait_until="networkidle", timeout=30000)
     page.wait_for_timeout(5000)
     ss = screenshot_b64(page)
@@ -286,11 +241,117 @@ def test_indices_visible(page, base_url, api_key):
         "Answer true if any market index with a numeric value is visible."
     ))
     return make_result(
-        "Market indices — visible on load",
+        f"[{vp}] Market indices visible",
         "pass" if ok else "fail",
         "pass" if ok else "medium",
-        "Nifty / Sensex index values should appear on the landing/hub page",
+        "Nifty/Sensex should appear on landing/hub page",
         reason, "Index values visible"
+    )
+
+
+# ── Mobile-only tests ─────────────────────────────────────────────────────────
+
+def test_mobile_bottom_nav(page, base_url):
+    """Mobile: #mobile-nav bottom bar should be visible (display:grid at ≤768px)."""
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    nav_visible = page.locator("#mobile-nav").is_visible()
+    sidebar_visible = page.locator("#sidebar").is_visible()
+    return make_result(
+        "[mobile] Bottom nav visible, sidebar hidden",
+        "pass" if (nav_visible and not sidebar_visible) else "fail",
+        "pass" if (nav_visible and not sidebar_visible) else "high",
+        "At 390px: #mobile-nav should show, #sidebar should be hidden",
+        f"nav={nav_visible}, sidebar={sidebar_visible}",
+        "mobile-nav visible, sidebar hidden"
+    )
+
+
+def test_mobile_watchlist_drawer(page, base_url, symbol):
+    """Mobile: tapping the Watchlist nav button opens the drawer."""
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    page.evaluate(f"() => localStorage.setItem('watchlist', JSON.stringify(['{symbol}']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    bypass_auth_and_show_app(page)
+    page.wait_for_timeout(3000)
+
+    wl_btn = page.locator("#nav-btn-watchlist").first
+    if wl_btn.count() == 0:
+        return make_result("[mobile] Watchlist drawer", "fail", "high",
+                           "#nav-btn-watchlist not found in bottom nav", "not found", "button present")
+    wl_btn.click()
+    page.wait_for_timeout(800)
+    drawer = page.locator("#mob-wl-drawer")
+    drawer_open = "open" in (drawer.get_attribute("class") or "")
+    return make_result(
+        "[mobile] Watchlist drawer opens on tap",
+        "pass" if drawer_open else "fail",
+        "pass" if drawer_open else "high",
+        "Tap #nav-btn-watchlist → #mob-wl-drawer should have class 'open'",
+        f"drawer has 'open' class: {drawer_open}",
+        "drawer opens"
+    )
+
+
+def test_mobile_add_stock(page, base_url, symbol):
+    """Mobile: + Add button is in the bottom nav."""
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    page.evaluate("() => localStorage.setItem('watchlist', JSON.stringify(['TITAGARH']))")
+    page.reload(wait_until="networkidle")
+    page.wait_for_timeout(2000)
+    bypass_auth_and_show_app(page)
+    page.wait_for_timeout(3000)
+
+    add_btn = page.locator("#nav-btn-add").first
+    if add_btn.count() == 0:
+        return make_result(f"[mobile] Add stock ({symbol})", "fail", "critical",
+                           "#nav-btn-add not found in mobile bottom nav", "not found", "button present")
+    add_btn.click()
+    page.wait_for_timeout(500)
+    modal_open = "open" in (page.locator("#modal").get_attribute("class") or "")
+    if not modal_open:
+        return make_result(f"[mobile] Add stock — modal opens", "fail", "critical",
+                           "Tap #nav-btn-add → modal should open", f"modal open: {modal_open}", "modal open")
+
+    page.locator("#modal-search").fill(symbol)
+    page.wait_for_timeout(800)
+    first = page.locator("#modal-list .modal-stock-item").first
+    if first.count() > 0:
+        first.click()
+    else:
+        page.locator("#modal-search").press("Enter")
+    page.wait_for_timeout(2000)
+
+    # On mobile, watchlist is in the drawer — check mob-wl-list
+    page.locator("#nav-btn-watchlist").click()
+    page.wait_for_timeout(800)
+    visible = page.locator("#mob-wl-list").filter(has_text=symbol).count() > 0
+    return make_result(
+        f"[mobile] Add stock — {symbol} in watchlist drawer",
+        "pass" if visible else "fail",
+        "pass" if visible else "critical",
+        "Add via mobile nav → symbol appears in watchlist drawer",
+        f"visible: {visible}", "stock in mobile drawer"
+    )
+
+
+def test_mobile_layout(page, base_url, api_key):
+    """Mobile: overall layout should look like a proper mobile app, not a squished desktop."""
+    page.goto(base_url, wait_until="networkidle", timeout=30000)
+    page.wait_for_timeout(3000)
+    ss = screenshot_b64(page)
+    ok, reason = claude_assert(ss, api_key=api_key, question=(
+        "Does this page look like a properly designed mobile app layout? "
+        "Look for: readable text (not tiny), no horizontal overflow, "
+        "a bottom navigation bar or mobile-friendly navigation. "
+        "Answer false if content is cut off or looks like a squished desktop site."
+    ))
+    return make_result(
+        "[mobile] Layout — mobile-friendly rendering",
+        "pass" if ok else "fail",
+        "pass" if ok else "high",
+        "Page should render correctly at 390px mobile width",
+        reason, "Mobile-friendly layout"
     )
 
 
@@ -312,39 +373,71 @@ def ui_agent(state: AgentState) -> dict:
     api_key  = os.environ.get("ANTHROPIC_API_KEY", "")
     symbol   = symbols[0]
 
-    print(f"[ui_agent] Testing {base_url}...")
+    print(f"[ui_agent] Testing {base_url} on desktop + mobile...")
 
     results = []
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        page    = browser.new_page(viewport={"width": 1280, "height": 800})
 
-        tests = [
-            lambda: test_no_js_errors(page, base_url),
-            lambda: test_page_loads(page, base_url),
-            lambda: test_theme_toggle(page, base_url),
-            lambda: test_indices_visible(page, base_url, api_key),
-            lambda: test_add_stock(page, base_url, symbol),
-            lambda: test_chart_renders(page, base_url, symbol, api_key),
-            lambda: test_localstorage_cache(page, base_url, symbol),
-            lambda: test_remove_stock(page, base_url, symbol),
+        # ── Desktop tests ──────────────────────────────────────────────────
+        print("  [desktop] Running desktop tests...")
+        dp = browser.new_page(viewport=VIEWPORTS["desktop"])
+
+        desktop_tests = [
+            lambda: test_no_js_errors(dp, base_url, "desktop"),
+            lambda: test_page_loads(dp, base_url, "desktop"),
+            lambda: test_theme_toggle_desktop(dp, base_url),
+            lambda: test_indices_visible(dp, base_url, api_key, "desktop"),
+            lambda: test_add_stock_desktop(dp, base_url, symbol),
+            lambda: test_chart_renders(dp, base_url, symbol, api_key, "desktop"),
+            lambda: test_localstorage_cache(dp, base_url, symbol, "desktop"),
+            lambda: test_remove_stock_desktop(dp, base_url, symbol),
         ]
         if api_key:
-            tests.insert(6, lambda: test_analysis_card_renders(page, base_url, symbol, api_key))
+            desktop_tests.insert(6, lambda: test_analysis_card_renders(dp, base_url, symbol, api_key, "desktop"))
 
-        for test_fn in tests:
+        for test_fn in desktop_tests:
             try:
                 r = test_fn()
                 icon = "✓" if r["status"] == "pass" else "✗"
-                print(f"  [{icon}] {r['test_name']} → {r['status'].upper()}")
+                print(f"    [{icon}] {r['test_name']} → {r['status'].upper()}")
                 results.append(r)
             except Exception as e:
-                results.append(make_result(
-                    test_fn.__name__ if hasattr(test_fn, '__name__') else "unknown",
-                    "error", "high", "Test threw an exception", str(e), "no exception"
-                ))
+                results.append(make_result("desktop_test", "error", "high",
+                                           "Test threw exception", str(e), "no exception"))
+        dp.close()
 
+        # ── Mobile tests ───────────────────────────────────────────────────
+        print("  [mobile] Running mobile tests...")
+        mp = browser.new_page(
+            viewport=VIEWPORTS["mobile"],
+            user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        )
+
+        mobile_tests = [
+            lambda: test_no_js_errors(mp, base_url, "mobile"),
+            lambda: test_page_loads(mp, base_url, "mobile"),
+            lambda: test_mobile_layout(mp, base_url, api_key),
+            lambda: test_indices_visible(mp, base_url, api_key, "mobile"),
+            lambda: test_mobile_bottom_nav(mp, base_url),
+            lambda: test_mobile_watchlist_drawer(mp, base_url, symbol),
+            lambda: test_mobile_add_stock(mp, base_url, symbol),
+            lambda: test_chart_renders(mp, base_url, symbol, api_key, "mobile"),
+        ]
+        if api_key:
+            mobile_tests.append(lambda: test_analysis_card_renders(mp, base_url, symbol, api_key, "mobile"))
+
+        for test_fn in mobile_tests:
+            try:
+                r = test_fn()
+                icon = "✓" if r["status"] == "pass" else "✗"
+                print(f"    [{icon}] {r['test_name']} → {r['status'].upper()}")
+                results.append(r)
+            except Exception as e:
+                results.append(make_result("mobile_test", "error", "high",
+                                           "Test threw exception", str(e), "no exception"))
+        mp.close()
         browser.close()
 
     passes   = sum(1 for r in results if r["status"] == "pass")
