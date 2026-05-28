@@ -52,9 +52,6 @@ export default async function handler(req) {
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
 
-  // Validate symbol early — applies to both priceOnly and full-analysis paths
-  if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
-
   // priceOnly mode — fast price refresh without full analysis
   if (p.get('priceOnly') === '1') {
     const yahooSym = symbol.toUpperCase() + '.NS';
@@ -82,6 +79,7 @@ export default async function handler(req) {
   let fund = {};
   try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
 
+  if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set' }, 500, cors);
 
@@ -255,10 +253,10 @@ ${smaLine(sma20, '20-day SMA')}
 ${smaLine(sma50, '50-day SMA')}
 - RSI(14): ${rsi.toFixed(1)} — ${rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : rsi < 45 ? 'weakening' : 'healthy'}
 - MACD: ${macd.toFixed(2)} vs Signal ${macdSignal.toFixed(2)} → ${macd > macdSignal ? 'BULLISH' : 'BEARISH'} crossover
-- BB position: ${bbPct.toFixed(0)}% — ${bbPct < 20 ? 'near lower band' : bbPct > 80 ? 'near upper band (extended)' : 'mid-band'}
+- Bollinger Band position: ${bbPct.toFixed(0)}% (Upper ₹${bbUpper.toFixed(2)} | Lower ₹${bbLower.toFixed(2)}) — ${bbPct < 20 ? 'near lower band (oversold zone)' : bbPct > 80 ? 'near upper band (extended/caution)' : 'mid-band (room to run)'}
 - 30d return: ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'}
 - 52w range: ₹${low52w.toFixed(2)} – ₹${high52w.toFixed(2)} | at ${(((price-low52w)/(high52w-low52w))*100).toFixed(0)}% of range
-- Volume vs 20d avg: ${(volRatio*100).toFixed(0)}%${volRatio > 1.5 ? ' (HIGH conviction)' : volRatio < 0.6 ? ' (LOW conviction)' : ''}
+- Volume vs 20d avg: ${(volRatio*100).toFixed(0)}%${volRatio > 1.5 ? ' (HIGH — conviction move)' : volRatio < 0.6 ? ' (LOW — weak conviction)' : ' (average)'}
 
 ━━━ SIGNAL SCORE: ${techScoreNorm}/10 ━━━
 → ${techScore >= 6 ? 'Strong bullish' : techScore >= 2 ? 'Mild bullish' : techScore >= -2 ? 'Neutral/mixed' : techScore >= -6 ? 'Mild bearish' : 'Strong bearish'}
@@ -266,8 +264,8 @@ ${smaLine(sma50, '50-day SMA')}
 ━━━ FUNDAMENTALS ━━━
 ${fundDataStatus}
 
-Reply ONLY with valid JSON, no markdown:
-{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"2-3 sentences","technicalPoints":["point 1","point 2","point 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week outlook","keyRisk":"biggest risk","knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
+Reply ONLY with valid JSON (no markdown, no code fences):
+{"signal":"BUY_MORE"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"1-sentence overall verdict","technicalNarrative":"2-3 sentences that CONNECT the specific numbers above — e.g. price vs SMA, what RSI + BB together imply, whether MACD confirms, and whether momentum is sustainable or extended","valuationContext":"2 sentences: is the current PE stretched or fair vs sector peers? If analyst target exists, explicitly say whether your technical target is a shorter-term milestone toward it or disagrees with it and why","entryExitLevels":{"buyZone":"₹XXX–₹YYY — reason (e.g. near support/SMA20/pullback zone)","breakoutLevel":"₹XXX — what this level confirms and why it matters","technicalTarget":"₹XXX–₹YYY (2-4 week horizon)","stopLoss":"₹XXX — state clearly that bullish thesis weakens below this"},"investorAction":"BUY_GRADUALLY"|"WAIT_FOR_DIP"|"BUY_ON_BREAKOUT"|"HOLD_EXISTING"|"REDUCE","investorActionReason":"1-2 sentences reconciling the main signal with any valuation tension, proximity to resistance, or volume caveats — this should resolve any contradiction between BUY_MORE signal and stretched metrics","confidenceReason":"1-2 sentences listing the SPECIFIC factors preventing HIGH confidence (e.g. BB position above 80%, near 52w high resistance, PE premium vs peers, volume below average, macro risk)","keyRisks":["concise risk phrase 1","concise risk phrase 2","concise risk phrase 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week price outlook","technicalPoints":["point 1","point 2","point 3"],"knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
 
 IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching Yahoo Finance format — 0.008 means 0.8% yield, NOT the number 0.8. roe, roce, operatingMargin, revenueGrowth, earningsGrowth are percentage values (e.g. 21.5 means 21.5%). debtToEquity is a ratio (e.g. 7.8 means 7.8x).`;
 
@@ -281,7 +279,7 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 1800,
         messages: [{ role: 'user', content: prompt }]
       }),
       signal: AbortSignal.timeout(25000)
@@ -339,10 +337,7 @@ function calcRSI(c, p=14) {
   if (c.length < p+1) return 50;
   let g=0, l=0;
   for (let i=c.length-p; i<c.length; i++) { const d=c[i]-c[i-1]; if(d>0) g+=d; else l-=d; }
-  if (g===0 && l===0) return 50;   // flat prices → neutral RSI
-  const avgG=g/p, avgL=l/p;
-  if (avgL===0) return 100;        // only gains → overbought
-  return 100-100/(1+avgG/avgL);
+  return 100-100/(1+(g/p)/((l/p)||0.001));
 }
 function emaSeriesArr(c, p) {
   const k = 2/(p+1), res = new Array(c.length).fill(null);

@@ -811,8 +811,77 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   background: var(--surface); border: 1px solid var(--border);
   border-top: none; border-radius: 0 0 10px 10px;
 }
-.dd-body.open { max-height: 1200px; }
-.dd-inner { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.dd-body.open { max-height: 2400px; }
+.dd-inner { padding: 18px 20px; display: flex; flex-direction: column; gap: 0; }
+
+/* ── DD BLOCK (each section) ─────────────────────────────────── */
+.dd-block { padding: 13px 0; border-bottom: 1px solid var(--border); }
+.dd-block:last-of-type { border-bottom: none; }
+.dd-block-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .9px; color: var(--text3); margin-bottom: 8px;
+}
+.dd-block-title .dd-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.dd-block-body { font-size: 12.5px; color: var(--text2); line-height: 1.7; }
+
+/* ── ENTRY/EXIT 2×2 GRID ─────────────────────────────────────── */
+.dd-levels-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px;
+}
+.dd-level-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px;
+}
+.dd-level-card.buy  { border-left: 3px solid var(--green); }
+.dd-level-card.brk  { border-left: 3px solid var(--accent); }
+.dd-level-card.tgt  { border-left: 3px solid rgba(168,85,247,.7); }
+.dd-level-card.stop { border-left: 3px solid var(--red); }
+.dd-level-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .7px; color: var(--text3); margin-bottom: 3px;
+}
+.dd-level-card.buy  .dd-level-label { color: var(--green); }
+.dd-level-card.brk  .dd-level-label { color: var(--accent); }
+.dd-level-card.tgt  .dd-level-label { color: rgba(168,85,247,.9); }
+.dd-level-card.stop .dd-level-label { color: var(--red); }
+.dd-level-price {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  letter-spacing: -.2px; margin-bottom: 2px;
+}
+.dd-level-reason { font-size: 10.5px; color: var(--text3); line-height: 1.45; }
+
+/* ── KEY RISKS PILLS ─────────────────────────────────────────── */
+.dd-risk-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.dd-risk-pill {
+  font-size: 11px; color: var(--red); background: var(--red-bg);
+  border: 1px solid var(--red-border); border-radius: 20px;
+  padding: 3px 10px; line-height: 1.5;
+}
+
+/* ── INVESTOR TAKEAWAY BAR ───────────────────────────────────── */
+.dd-takeaway {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 9px; padding: 12px 14px;
+}
+.dd-action-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.dd-action-badge {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .8px; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.dd-action-badge.BUY_GRADUALLY  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.dd-action-badge.WAIT_FOR_DIP   { background: rgba(234,179,8,.12); color: #ca8a04; border: 1px solid rgba(234,179,8,.3); }
+.dd-action-badge.BUY_ON_BREAKOUT{ background: rgba(59,130,246,.12); color: var(--accent); border: 1px solid rgba(59,130,246,.3); }
+.dd-action-badge.HOLD_EXISTING  { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+.dd-action-badge.REDUCE         { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.dd-takeaway-reason { font-size: 12.5px; color: var(--text2); line-height: 1.65; }
+.dd-confidence-note {
+  font-size: 11.5px; color: var(--text3); line-height: 1.6;
+  border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px;
+}
+.dd-confidence-note strong { color: var(--text2); }
 .dd-section-label {
   font-size: 9.5px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .8px; color: var(--text3); margin-bottom: 6px;
@@ -1188,6 +1257,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   }
   .dd-inner{
     padding:14px 12px;
+  }
+  .dd-levels-grid{
+    grid-template-columns: 1fr;
   }
 
   .chat-section-v2{
@@ -2897,7 +2969,7 @@ function renderSRBar(record) {
     </div>`;
 }
 
-// AI Deep Dive (collapsible bottom section)
+// AI Deep Dive (collapsible bottom section) — 5-block playbook
 function renderDeepDive(record) {
   const a = record.aiAnalysis;
   if (!a) return '';
@@ -2906,6 +2978,94 @@ function renderDeepDive(record) {
     ? new Date(record.lastUpdated).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     : '—';
 
+  // ── helpers ────────────────────────────────────────────────────────────────
+  const eel = a.entryExitLevels || {};
+  const splitPrice = s => {
+    if (!s) return { price: '', reason: '' };
+    const m = s.match(/^(₹[\d,\.–\-]+(?:\s*–\s*₹[\d,\.]+)?)(.*)/);
+    return m ? { price: m[1].trim(), reason: m[2].replace(/^[\s\-–—]+/, '').trim() } : { price: '', reason: s };
+  };
+  const buyZ  = splitPrice(eel.buyZone);
+  const brkL  = splitPrice(eel.breakoutLevel);
+  const tgtL  = splitPrice(eel.technicalTarget);
+  const slL   = splitPrice(eel.stopLoss);
+  const hasLevels = eel.buyZone || eel.breakoutLevel || eel.technicalTarget || eel.stopLoss;
+
+  // Backward-compat: old cache has keyRisk string, new has keyRisks array
+  const risks = Array.isArray(a.keyRisks) && a.keyRisks.length
+    ? a.keyRisks
+    : (a.keyRisk ? [a.keyRisk] : []);
+
+  const actionLabels = {
+    BUY_GRADUALLY:   'Accumulate Gradually',
+    WAIT_FOR_DIP:    'Wait for Pullback',
+    BUY_ON_BREAKOUT: 'Buy on Breakout',
+    HOLD_EXISTING:   'Hold — No New Buying',
+    REDUCE:          'Consider Reducing',
+  };
+  const action = a.investorAction || '';
+
+  // ── block builder ──────────────────────────────────────────────────────────
+  const block = (dotColor, title, bodyHtml) => `
+    <div class="dd-block">
+      <div class="dd-block-title">
+        <span class="dd-dot" style="background:${dotColor}"></span>
+        ${title}
+      </div>
+      <div class="dd-block-body">${bodyHtml}</div>
+    </div>`;
+
+  // ── 1. Technical View ──────────────────────────────────────────────────────
+  const techHtml = a.technicalNarrative || a.summary || '';
+
+  // ── 2. Valuation View ─────────────────────────────────────────────────────
+  const valHtml  = a.valuationContext   || '';
+
+  // ── 3. Entry / Exit Levels ────────────────────────────────────────────────
+  const levelCard = (cls, label, priceStr, reason) => priceStr ? `
+    <div class="dd-level-card ${cls}">
+      <div class="dd-level-label">${label}</div>
+      <div class="dd-level-price">${priceStr}</div>
+      ${reason ? `<div class="dd-level-reason">${reason}</div>` : ''}
+    </div>` : '';
+
+  const levelsHtml = hasLevels ? `
+    <div class="dd-levels-grid">
+      ${levelCard('buy',  '🛡 Buy Zone',      buyZ.price,  buyZ.reason)}
+      ${levelCard('brk',  '⚡ Breakout Level', brkL.price,  brkL.reason)}
+      ${levelCard('tgt',  '🎯 Technical Target',tgtL.price, tgtL.reason)}
+      ${levelCard('stop', '🚨 Stop-Loss',       slL.price,   slL.reason)}
+    </div>` : '';
+
+  // ── 4. Key Risks ──────────────────────────────────────────────────────────
+  const risksHtml = risks.length
+    ? `<div class="dd-risk-pills">${risks.map(r => `<span class="dd-risk-pill">⚠ ${r}</span>`).join('')}</div>`
+    : '';
+
+  // ── 5. Investor Takeaway ──────────────────────────────────────────────────
+  const takeawayHtml = `
+    <div class="dd-takeaway">
+      ${action ? `
+        <div class="dd-action-row">
+          <span class="dd-action-badge ${action}">${actionLabels[action] || action.replace(/_/g,' ')}</span>
+        </div>` : ''}
+      ${a.investorActionReason ? `<div class="dd-takeaway-reason">${a.investorActionReason}</div>` : ''}
+      ${a.confidenceReason ? `
+        <div class="dd-confidence-note">
+          <strong>Why confidence is ${a.confidence || 'Medium'}:</strong> ${a.confidenceReason}
+        </div>` : ''}
+    </div>`;
+
+  // ── 2-4 week outlook ──────────────────────────────────────────────────────
+  const outlookHtml = a.outlook ? `
+    <div class="dd-block">
+      <div class="dd-block-title">
+        <span class="dd-dot" style="background:var(--text3)"></span>
+        📅 2–4 Week Outlook
+      </div>
+      <div class="dd-block-body" style="color:var(--text2)">${a.outlook}</div>
+    </div>` : '';
+
   return `
     <button class="dd-toggle" onclick="toggleDeepDive(this)" id="dd-btn">
       🔍 AI Deep Dive — Full Breakdown
@@ -2913,23 +3073,31 @@ function renderDeepDive(record) {
     </button>
     <div class="dd-body" id="dd-body">
       <div class="dd-inner">
-        ${a.summary ? `
-          <div>
-            <div class="dd-section-label">Full Analysis</div>
-            <div class="dd-text">${a.summary}</div>
+        ${techHtml ? block('var(--accent)',              '📊 Technical View',     techHtml) : ''}
+        ${valHtml  ? block('rgba(168,85,247,.8)',        '💰 Valuation View',     valHtml)  : ''}
+        ${levelsHtml ? `
+          <div class="dd-block">
+            <div class="dd-block-title">
+              <span class="dd-dot" style="background:var(--green)"></span>
+              🎯 Entry / Exit Levels
+            </div>
+            <div class="dd-block-body">${levelsHtml}</div>
           </div>` : ''}
-        ${a.outlook ? `
-          <div>
-            <div class="dd-section-label">Short-Term Outlook</div>
-            <div class="dd-outlook">💬 ${a.outlook}</div>
+        ${risksHtml ? block('var(--red)',                '⚠️ Key Risks',          risksHtml)  : ''}
+        ${(action || a.investorActionReason) ? `
+          <div class="dd-block">
+            <div class="dd-block-title">
+              <span class="dd-dot" style="background:var(--green)"></span>
+              ✅ Investor Takeaway
+            </div>
+            <div class="dd-block-body">${takeawayHtml}</div>
           </div>` : ''}
-        ${a.keyRisk ? `
-          <div class="dd-risk">⚠️ <strong>Key Risk:</strong> ${a.keyRisk}</div>` : ''}
-        <div class="dd-footer">
+        ${outlookHtml}
+        <div class="dd-footer" style="margin-top:10px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text3)">
           <span>⏱ ${ts} · Yahoo Finance + Claude Sonnet</span>
           <button class="dd-refresh" onclick="triggerAnalysis('${record.symbol}')">↺ Refresh</button>
         </div>
-        <div class="dd-disclaimer">
+        <div class="dd-disclaimer" style="font-size:10px;color:var(--text3);line-height:1.55;margin-top:10px">
           ⚠️ <strong>SEBI Disclaimer:</strong> This analysis is generated by AI for informational purposes only
           and does not constitute investment advice. Please consult a SEBI-registered investment advisor
           before making any investment decisions. Past performance is not indicative of future results.
