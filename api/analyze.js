@@ -112,13 +112,18 @@ export default async function handler(req) {
     const volumes = rows.map(r => r.v);
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
-    // ── 2. Fundamentals: three passes ────────────────────────────────────────
+    // ── 2. Fundamentals: two passes in parallel ──────────────────────────────
     let yfFund = {};
     let yfFetchedAny = false;
 
+    const [_r7, _rQS] = await Promise.all([
+      fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`, 5000).catch(() => null),
+      fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`, 5000).catch(() => null),
+    ]);
+
     // 2a. v7/finance/quote — market cap, P/E, EPS, dividends
     try {
-      const r = await fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`, 6000);
+      const r = _r7;
       if (r) {
         const q7 = (await r.json())?.quoteResponse?.result?.[0] || {};
         if (q7.symbol) {
@@ -140,8 +145,7 @@ export default async function handler(req) {
 
     // 2b. v10/quoteSummary — ROE, margins, D/E, growth, analyst targets
     try {
-      const modules = 'financialData,defaultKeyStatistics,summaryDetail';
-      const r = await fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=${modules}`, 7000);
+      const r = _rQS;
       if (r) {
         const sr = (await r.json())?.quoteSummary?.result?.[0];
         if (sr) {
@@ -278,11 +282,11 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1800,
         messages: [{ role: 'user', content: prompt }]
       }),
-      signal: AbortSignal.timeout(25000)
+      signal: AbortSignal.timeout(20000)
     });
 
     if (!claudeRes.ok) return reply({ error: 'Claude: ' + (await claudeRes.text()).slice(0, 200) }, 500, cors);
