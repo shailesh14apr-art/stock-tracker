@@ -80,7 +80,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .stock-card-top{display:flex;align-items:center;}
 .stock-symbol{font-size:13px;font-weight:700;flex:1;}
 .signal-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;}
-.signal-BUY_MORE{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.signal-BUY{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
 .signal-HOLD{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
 .signal-REVIEW{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
 .signal-PENDING{background:var(--surface2);color:var(--text3);border:1px solid var(--border2);}
@@ -114,13 +114,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .content{padding:20px 28px;display:flex;flex-direction:column;gap:20px;}
 .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:12px;}
 .signal-banner{border-radius:var(--radius);padding:18px 22px;border-width:1px;border-style:solid;display:flex;align-items:flex-start;gap:16px;}
-.signal-banner.BUY_MORE{background:var(--green-bg);border-color:var(--green-border);}
+.signal-banner.BUY{background:var(--green-bg);border-color:var(--green-border);}
 .signal-banner.HOLD{background:var(--amber-bg);border-color:var(--amber-border);}
 .signal-banner.REVIEW{background:var(--red-bg);border-color:var(--red-border);}
 .signal-icon{font-size:28px;margin-top:2px;}
 .signal-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
 .signal-title{font-size:20px;font-weight:800;margin:2px 0 6px;}
-.signal-title.BUY_MORE{color:var(--green);}
+.signal-title.BUY{color:var(--green);}
 .signal-title.HOLD{color:var(--amber);}
 .signal-title.REVIEW{color:var(--red);}
 .signal-reason{font-size:13px;color:var(--text2);line-height:1.55;}
@@ -654,7 +654,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   border: 1.5px solid; white-space: nowrap;
   transition: opacity .2s;
 }
-.ai-pill.BUY_MORE { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.ai-pill.BUY { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
 .ai-pill.HOLD     { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
 .ai-pill.REVIEW   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
 
@@ -738,7 +738,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   border-radius: 7px; text-transform: uppercase; letter-spacing: .4px;
   border: 1.5px solid; flex-shrink: 0;
 }
-.scorecard-sig-pill.BUY_MORE { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.scorecard-sig-pill.BUY { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
 .scorecard-sig-pill.HOLD     { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
 .scorecard-sig-pill.REVIEW   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
 .scorecard-conf { font-size: 11px; color: var(--text3); }
@@ -1348,7 +1348,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
             <span class="lp-preview-send">↑</span>
           </div>
           <div class="lp-preview-chips-row">
-            <span class="lp-preview-chip">Why is this a Buy More?</span>
+            <span class="lp-preview-chip">Why is the view Positive?</span>
             <span class="lp-preview-chip">Key risks?</span>
             <span class="lp-preview-chip">Short-term outlook?</span>
           </div>
@@ -1356,7 +1356,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="lp-preview-signal">
           <div>
             <div style="margin-bottom:4px"><span class="lp-illustrative-badge">Illustrative example — not live data</span></div>
-            <div class="lp-preview-sig-title">🟢 BUY MORE · HIGH CONFIDENCE · 7.4/10</div>
+            <div class="lp-preview-sig-title">🟢 BUY · HIGH CONFIDENCE · 7.4/10</div>
             <div class="lp-preview-sig-text">Strong bullish confluence. Price above EMA 20 &amp; 50. RSI at 61, MACD bullish crossover. Volume above average confirming momentum.</div>
           </div>
         </div>
@@ -1366,7 +1366,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <div class="lp-pm"><div class="lp-pm-l">RSI</div><div class="lp-pm-v">61.4</div></div>
           <div class="lp-pm"><div class="lp-pm-l">Score</div><div class="lp-pm-v g" title="Composite score across 7 technicals + fundamentals">7.4/10</div></div>
         </div>
-        <div style="margin:0 12px 10px;font-size:9px;color:var(--text3);line-height:1.5;">Score = composite of 7 indicators (RSI, MACD, EMA, Bollinger, volume, fundamentals, analyst consensus) · <strong>Buy More</strong> = add to position · <strong>Hold</strong> = stay put · <strong>Review</strong> = reassess</div>
+        <div style="margin:0 12px 10px;font-size:9px;color:var(--text3);line-height:1.5;">Score = composite of 7 indicators (RSI, MACD, EMA, Bollinger, volume, fundamentals, analyst consensus) · <strong>Buy</strong> = positive research view · <strong>Hold</strong> = neutral/watch · <strong>Review</strong> = reassess</div>
       </div>
     </div>
   </section>
@@ -1441,7 +1441,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="lp-step">
           <div class="lp-step-num">3</div>
           <div class="lp-step-title">Get your signal in ~20 seconds</div>
-          <div class="lp-step-desc">Claude Sonnet analyses everything and returns a Buy More / Hold / Review signal with support &amp; resistance levels, key risks and a full written rationale.</div>
+          <div class="lp-step-desc">Claude Sonnet analyses everything and returns a Buy / Hold / Review research view with support &amp; resistance levels, key risks and a full written rationale.</div>
         </div>
       </div>
     </div>
@@ -1460,7 +1460,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <footer class="lp-footer">
     <div class="lp-footer-inner">
       <div class="lp-footer-brand">📈 BazaarLens</div>
-      <div class="lp-footer-disc">⚠️ BazaarLens provides AI-generated analysis for informational purposes only and does not constitute investment advice. BazaarLens is <strong>not a SEBI-registered investment adviser</strong>. Consult a SEBI-registered investment advisor before making any investment decisions. Past performance does not guarantee future results.</div>
+      <div class="lp-footer-disc">⚠️ BazaarLens provides AI-generated research analysis for informational purposes only. This does not constitute investment advice or a personalised investment recommendation. BazaarLens is <strong>not a SEBI-registered Investment Adviser or Research Analyst</strong>. Consult a SEBI-registered Investment Adviser before making any investment decisions. Past performance does not guarantee future results.</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
         <a href="/privacy" class="lp-footer-link">Privacy Policy</a>
         <a href="/terms" class="lp-footer-link">Terms of Service</a>
@@ -2296,7 +2296,15 @@ const TF_DAYS = { W1:5, M1:22, M3:65, M6:130, Y1:260 };
 async function loadFundamentals() {
   try { const r=await fetch('/fundamentals.json'); if(r.ok){const d=await r.json();fundDB=d;delete fundDB._meta;} } catch(_) {}
 }
-function getStoredData() { try{return JSON.parse(localStorage.getItem('stockData')||'{}');}catch{return{};} }
+function normalizeSignal(s) { return s === 'BUY_MORE' ? 'BUY' : s; }
+function getStoredData() {
+  try {
+    const d = JSON.parse(localStorage.getItem('stockData') || '{}');
+    // Migrate legacy BUY_MORE → BUY for any cached records
+    Object.values(d).forEach(r => { if (r.signal) r.signal = normalizeSignal(r.signal); if (r.aiAnalysis?.signal) r.aiAnalysis.signal = normalizeSignal(r.aiAnalysis.signal); });
+    return d;
+  } catch { return {}; }
+}
 function storeAnalysis(sym,d) { const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a)); }
 function getWatchlist() { try{return JSON.parse(localStorage.getItem('watchlist')||'["TITAGARH"]');}catch{return['TITAGARH'];} }
 
@@ -2322,8 +2330,8 @@ async function syncWatchlistFromFirebase() {
 let _chatMsgs = [], _chatLoading = false, _chatSugTimer = null;
 
 const CHAT_CHIPS = {
-  BUY_MORE: [
-    'Why is this a Buy More signal?',
+  BUY: [
+    'Why is the research view positive on this stock?',
     'What stop-loss levels should I use?',
     'How does the valuation look vs sector peers?',
     'What could invalidate the bullish thesis?',
@@ -2331,7 +2339,7 @@ const CHAT_CHIPS = {
     'Summarise the key technical setup',
   ],
   HOLD: [
-    'What would push this to a Buy More signal?',
+    'What would make the research view turn positive?',
     'What would trigger a Review / sell signal?',
     'Is the current valuation attractive here?',
     'Explain the technical setup in simple terms',
@@ -2568,7 +2576,7 @@ function _buildPortfolioCtx() {
 function _renderPcHeader() {
   const portfolio = _buildPortfolioCtx();
   const analysed  = portfolio.filter(s => s.signal);
-  const buy    = analysed.filter(s => s.signal === 'BUY_MORE').length;
+  const buy    = analysed.filter(s => s.signal === 'BUY').length;
   const hold   = analysed.filter(s => s.signal === 'HOLD').length;
   const review = analysed.filter(s => s.signal === 'REVIEW').length;
   const na     = portfolio.length - analysed.length;
@@ -2579,7 +2587,7 @@ function _renderPcHeader() {
   const pills = document.getElementById('pc-signal-pills');
   if (pills) {
     let html = '';
-    if (buy)    html += '<span class="pc-pill pc-pill-buy">▲ ' + buy + ' Buy More</span>';
+    if (buy)    html += '<span class="pc-pill pc-pill-buy">▲ ' + buy + ' Buy</span>';
     if (hold)   html += '<span class="pc-pill pc-pill-hold">● ' + hold + ' Hold</span>';
     if (review) html += '<span class="pc-pill pc-pill-review">▼ ' + review + ' Review</span>';
     if (na)     html += '<span class="pc-pill pc-pill-na">' + na + ' pending</span>';
@@ -2768,7 +2776,7 @@ function renderSidebar() {
         upsideStyle = 'color:var(--red)';
       } else if (signal === 'HOLD') {
         upsideStyle = 'color:var(--amber)';
-      } else if (signal === 'BUY_MORE') {
+      } else if (signal === 'BUY') {
         upsideStyle = 'color:var(--green)';
       } else if (upsidePct < 0) {
         upsideStyle = 'color:var(--red)';
@@ -2997,11 +3005,11 @@ function renderDeepDive(record) {
     : (a.keyRisk ? [a.keyRisk] : []);
 
   const actionLabels = {
-    BUY_GRADUALLY:   'Accumulate Gradually',
-    WAIT_FOR_DIP:    'Wait for Pullback',
-    BUY_ON_BREAKOUT: 'Buy on Breakout',
-    HOLD_EXISTING:   'Hold — No New Buying',
-    REDUCE:          'Consider Reducing',
+    BUY_GRADUALLY:   'Accumulate at Levels',
+    WAIT_FOR_DIP:    'Await Pullback First',
+    BUY_ON_BREAKOUT: 'Watch Breakout Level',
+    HOLD_EXISTING:   'Hold at Current Levels',
+    REDUCE:          'Book Partial Profits',
   };
   const action = a.investorAction || '';
 
@@ -3088,7 +3096,7 @@ function renderDeepDive(record) {
           <div class="dd-block">
             <div class="dd-block-title">
               <span class="dd-dot" style="background:var(--green)"></span>
-              ✅ Investor Takeaway
+              🔬 Research View
             </div>
             <div class="dd-block-body">${takeawayHtml}</div>
           </div>` : ''}
@@ -3098,8 +3106,9 @@ function renderDeepDive(record) {
           <button class="dd-refresh" onclick="triggerAnalysis('${record.symbol}')">↺ Refresh</button>
         </div>
         <div class="dd-disclaimer" style="font-size:10px;color:var(--text3);line-height:1.55;margin-top:10px">
-          ⚠️ <strong>SEBI Disclaimer:</strong> This analysis is generated by AI for informational purposes only
-          and does not constitute investment advice. Please consult a SEBI-registered investment advisor
+          ⚠️ <strong>SEBI Disclaimer:</strong> This AI-generated research analysis is for informational purposes only
+          and does not constitute investment advice or a personalised investment recommendation. BazaarLens is not a
+          SEBI-registered Investment Adviser or Research Analyst. Consult a SEBI-registered Investment Adviser
           before making any investment decisions. Past performance is not indicative of future results.
         </div>
       </div>
@@ -3260,7 +3269,7 @@ function renderAIScorecard(record) {
   const ny      = (cy + nLen * Math.sin(nAngRad)).toFixed(1);
 
   const confColor = { HIGH: 'var(--green)', MEDIUM: 'var(--amber)', LOW: 'var(--red)' }[a.confidence] || 'var(--text3)';
-  const sigLabel  = { BUY_MORE: '↑ BUY MORE', HOLD: '→ HOLD', REVIEW: '↓ REVIEW EXIT' }[a.signal] || a.signal;
+  const sigLabel  = { BUY: '↑ BUY', HOLD: '→ HOLD', REVIEW: '↓ REVIEW' }[a.signal] || a.signal;
   const macdSig   = ind.macdSignal ?? 0;
   const macdBull  = (ind.macd || 0) > macdSig;
   const priceNow  = ind.price || record.price?.current || 0;
@@ -3384,7 +3393,7 @@ function renderAnalysis(d) {
     ? (((d.targets.average - d.price.current) / d.price.current) * 100).toFixed(1)
     : '—';
 
-  const pilotLabel = { BUY_MORE: '↑ Buy More', HOLD: '→ Hold', REVIEW: '↓ Review Exit' }[d.signal] || d.signal;
+  const pilotLabel = { BUY: '↑ Buy', HOLD: '→ Hold', REVIEW: '↓ Review' }[d.signal] || d.signal;
 
   document.getElementById('main-content').innerHTML = `
 
