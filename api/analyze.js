@@ -11,18 +11,18 @@ const YF_HEADERS = {
   'Origin': 'https://finance.yahoo.com',
 };
 
-// Try query1 then query2 — Vercel edge IPs are sometimes blocked on query1
-async function fetchYF(path, timeout = 7000) {
-  for (const host of ['query1', 'query2']) {
-    try {
-      const res = await fetch(`https://${host}.finance.yahoo.com${path}`, {
-        headers: YF_HEADERS,
-        signal: AbortSignal.timeout(timeout),
-      });
-      if (res.ok) return res;
-    } catch (_) {}
+// Race query1 and query2 in parallel — whichever responds first wins
+async function fetchYF(path, timeout = 4000) {
+  try {
+    const results = await Promise.allSettled([
+      fetch(`https://query1.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) }),
+      fetch(`https://query2.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) }),
+    ]);
+    const winner = results.find(r => r.status === 'fulfilled' && r.value.ok);
+    return winner ? winner.value : null;
+  } catch (_) {
+    return null;
   }
-  return null;
 }
 
 const SECTOR_CONTEXT = {
@@ -117,8 +117,8 @@ export default async function handler(req) {
     let yfFetchedAny = false;
 
     const [_r7, _rQS] = await Promise.all([
-      fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`, 5000).catch(() => null),
-      fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`, 5000).catch(() => null),
+      fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`).catch(() => null),
+      fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`).catch(() => null),
     ]);
 
     // 2a. v7/finance/quote — market cap, P/E, EPS, dividends
@@ -286,7 +286,7 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
         max_tokens: 1800,
         messages: [{ role: 'user', content: prompt }]
       }),
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(18000)
     });
 
     if (!claudeRes.ok) return reply({ error: 'Claude: ' + (await claudeRes.text()).slice(0, 200) }, 500, cors);
