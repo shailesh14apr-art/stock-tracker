@@ -81,8 +81,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .stock-symbol{font-size:13px;font-weight:700;flex:1;}
 .signal-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;}
 .signal-BUY{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.signal-BUY_ON_BREAKOUT{background:rgba(59,130,246,.12);color:var(--accent);border:1px solid rgba(59,130,246,.3);}
+.signal-WATCH{background:rgba(234,179,8,.12);color:#ca8a04;border:1px solid rgba(234,179,8,.3);}
 .signal-HOLD{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
 .signal-REVIEW{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.signal-AVOID{background:rgba(239,68,68,.18);color:var(--red);border:1px solid var(--red-border);}
 .signal-PENDING{background:var(--surface2);color:var(--text3);border:1px solid var(--border2);}
 .signal-LOADING{background:rgba(59,130,246,.1);color:var(--accent);border:1px solid rgba(59,130,246,.25);}
 .stock-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
@@ -654,9 +657,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   border: 1.5px solid; white-space: nowrap;
   transition: opacity .2s;
 }
-.ai-pill.BUY { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
-.ai-pill.HOLD     { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
-.ai-pill.REVIEW   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+.ai-pill.BUY            { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.ai-pill.BUY_ON_BREAKOUT{ background: rgba(59,130,246,.12); color: var(--accent); border-color: rgba(59,130,246,.3); }
+.ai-pill.WATCH          { background: rgba(234,179,8,.12); color: #ca8a04; border-color: rgba(234,179,8,.3); }
+.ai-pill.HOLD           { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.ai-pill.REVIEW         { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+.ai-pill.AVOID          { background: rgba(239,68,68,.18); color: var(--red); border-color: var(--red-border); }
 
 /* bullets removed (unused) */
 
@@ -738,9 +744,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   border-radius: 7px; text-transform: uppercase; letter-spacing: .4px;
   border: 1.5px solid; flex-shrink: 0;
 }
-.scorecard-sig-pill.BUY { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
-.scorecard-sig-pill.HOLD     { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
-.scorecard-sig-pill.REVIEW   { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+.scorecard-sig-pill.BUY            { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.scorecard-sig-pill.BUY_ON_BREAKOUT{ background: rgba(59,130,246,.12); color: var(--accent); border-color: rgba(59,130,246,.3); }
+.scorecard-sig-pill.WATCH          { background: rgba(234,179,8,.12); color: #ca8a04; border-color: rgba(234,179,8,.3); }
+.scorecard-sig-pill.HOLD           { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.scorecard-sig-pill.REVIEW         { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
+.scorecard-sig-pill.AVOID          { background: rgba(239,68,68,.18); color: var(--red); border-color: var(--red-border); }
 .scorecard-conf { font-size: 11px; color: var(--text3); }
 
 /* Gauge */
@@ -2296,7 +2305,18 @@ const TF_DAYS = { W1:5, M1:22, M3:65, M6:130, Y1:260 };
 async function loadFundamentals() {
   try { const r=await fetch('/fundamentals.json'); if(r.ok){const d=await r.json();fundDB=d;delete fundDB._meta;} } catch(_) {}
 }
-function normalizeSignal(s) { return s === 'BUY_MORE' ? 'BUY' : s; }
+function normalizeSignal(s) {
+  if (!s) return 'HOLD';
+  const u = s.toUpperCase().replace(/\s+/g, '_');
+  if (u === 'BUY_MORE') return 'BUY'; // legacy cache migration
+  return u;
+}
+// Compat helpers — read new schema (scorecard.*) with fallback to legacy flat fields
+function getAiSignal(a)      { return normalizeSignal(a?.scorecard?.rating || a?.signal || 'HOLD'); }
+function getAiConfidence(a)  { return (a?.scorecard?.confidence || a?.confidence || 'MEDIUM').toUpperCase(); }
+function getAiScore(a, ind)  { return a?.scorecard?.score ?? ind?.techScore ?? 5; }
+function getAiSummary(a)     { return a?.scorecard?.summary || a?.summary || ''; }
+function getAiBias(a)        { return a?.scorecard?.bias || ''; }
 function getStoredData() {
   try {
     const d = JSON.parse(localStorage.getItem('stockData') || '{}');
@@ -2863,8 +2883,11 @@ async function triggerAnalysis(sym) {
     setLoadingStep(3);
     const ind=result.indicators||{}, analysis=result.analysis||{};
     if(!ind.price) throw new Error('Analysis returned invalid data');
+    // Normalise rating to CSS-safe key (spaces → underscores)
+    const ratingRaw = (analysis.scorecard?.rating || 'HOLD').toUpperCase();
+    const signal    = ratingRaw.replace(/\s+/g, '_');
     const record={
-      symbol:sym, name, sector, signal:analysis.signal||'HOLD', signalReason:analysis.summary||'',
+      symbol:sym, name, sector, signal, signalReason:analysis.scorecard?.summary||'',
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
       aiAnalysis:analysis, aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
@@ -3258,23 +3281,34 @@ function renderAIScorecard(record) {
       </div>`;
   }
 
+  const aiSignal  = getAiSignal(a);
+  const aiConf    = getAiConfidence(a);
+  const aiScore   = getAiScore(a, ind);
+  const aiBias    = getAiBias(a);
+
   const cx = 80, cy = 78, r = 58;
-  const score       = ind.techScore ?? 5;
+  const score       = aiScore;
   const scoreColor  = score >= 7 ? 'var(--green)' : score >= 4 ? 'var(--amber)' : 'var(--red)';
-  const scoreLabel  = score >= 7 ? 'Strong Bullish' : score >= 5 ? 'Mild Bullish' : score >= 3 ? 'Neutral / Mixed' : 'Bearish Pressure';
+  const scoreLabel  = aiBias || (score >= 7 ? 'Strong Bullish' : score >= 5 ? 'Mild Bullish' : score >= 3 ? 'Neutral / Mixed' : 'Bearish Pressure');
 
   const nLen    = 43;
   const nAngRad = (180 + (score / 10) * 180) * Math.PI / 180;
   const nx      = (cx + nLen * Math.cos(nAngRad)).toFixed(1);
   const ny      = (cy + nLen * Math.sin(nAngRad)).toFixed(1);
 
-  const confColor = { HIGH: 'var(--green)', MEDIUM: 'var(--amber)', LOW: 'var(--red)' }[a.confidence] || 'var(--text3)';
-  const sigLabel  = { BUY: '↑ BUY', HOLD: '→ HOLD', REVIEW: '↓ REVIEW' }[a.signal] || a.signal;
+  const confColor = { HIGH: 'var(--green)', MEDIUM: 'var(--amber)', LOW: 'var(--red)' }[aiConf] || 'var(--text3)';
+  const sigLabels = { BUY:'↑ BUY', BUY_ON_BREAKOUT:'⚡ BUY ON BREAKOUT', WATCH:'👁 WATCH', HOLD:'→ HOLD', REVIEW:'↓ REVIEW', AVOID:'✕ AVOID' };
+  const sigLabel  = sigLabels[aiSignal] || aiSignal.replace(/_/g,' ');
   const macdSig   = ind.macdSignal ?? 0;
   const macdBull  = (ind.macd || 0) > macdSig;
   const priceNow  = ind.price || record.price?.current || 0;
 
-  const points = (a.technicalPoints || []).slice(0, 3);
+  // New schema: use technical_view bullets; fallback to legacy technicalPoints
+  const bullish  = (a.technical_view?.bullish_factors  || []).slice(0, 2);
+  const caution  = (a.technical_view?.caution_factors  || []).slice(0, 1);
+  const points   = bullish.length || caution.length
+    ? [...bullish.map(p => ({ text: p, pos: true })), ...caution.map(p => ({ text: p, pos: false }))]
+    : (a.technicalPoints || []).slice(0, 3).map(p => ({ text: p, pos: null }));
 
   const miniCell = (label, val, color) => `
     <div class="mini-ind-v2">
@@ -3327,8 +3361,8 @@ function renderAIScorecard(record) {
 
       <!-- Signal + confidence -->
       <div class="scorecard-sig-row">
-        <span class="scorecard-sig-pill ${a.signal}">${sigLabel}</span>
-        <span class="scorecard-conf">Conf: <strong style="color:${confColor}">${a.confidence}</strong></span>
+        <span class="scorecard-sig-pill ${aiSignal}">${sigLabel}</span>
+        <span class="scorecard-conf">Conf: <strong style="color:${confColor}">${aiConf}</strong></span>
       </div>
 
       <!-- Semi-circle gauge -->
