@@ -12,14 +12,21 @@ const YF_HEADERS = {
 };
 
 // Race query1 and query2 in parallel — whichever responds first wins
+// We explicitly cancel the loser body to avoid dangling streams in the edge runtime
 async function fetchYF(path, timeout = 4000) {
   try {
     const results = await Promise.allSettled([
       fetch(`https://query1.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) }),
       fetch(`https://query2.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) }),
     ]);
-    const winner = results.find(r => r.status === 'fulfilled' && r.value.ok);
-    return winner ? winner.value : null;
+    let winner = null;
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.ok) {
+        if (!winner) { winner = r.value; }
+        else { r.value.body?.cancel(); } // discard loser to free the stream
+      }
+    }
+    return winner;
   } catch (_) {
     return null;
   }
@@ -289,11 +296,25 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
       signal: AbortSignal.timeout(18000)
     });
 
-    if (!claudeRes.ok) return reply({ error: 'Claude: ' + (await claudeRes.text()).slice(0, 200) }, 500, cors);
+    if (!claudeRes.ok) {
+      const errText = (await claudeRes.text()).slice(0, 300);
+      console.error('[analyze] Claude error', claudeRes.status, errText);
+      return reply({ error: 'Claude: ' + errText }, 500, cors);
+    }
 
-    const cd       = await claudeRes.json();
-    const raw      = cd.content[0].text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const analysis = JSON.parse(raw);
+    const cd  = await claudeRes.json();
+    const raw = cd.content?.[0]?.text?.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    if (!raw) {
+      console.error('[analyze] Claude returned no text content:', JSON.stringify(cd).slice(0, 200));
+      return reply({ error: 'Claude returned empty response' }, 500, cors);
+    }
+    let analysis;
+    try {
+      analysis = JSON.parse(raw);
+    } catch (parseErr) {
+      console.error('[analyze] JSON.parse failed. raw:', raw.slice(0, 300));
+      return reply({ error: 'Claude response was not valid JSON' }, 500, cors);
+    }
 
     // Merge Claude's training knowledge into gaps
     // Priority: manual fundDB > Yahoo Finance > Claude training data
@@ -324,6 +345,7 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
     }, 200, cors);
 
   } catch (e) {
+    console.error('[analyze] unhandled error:', e?.message, e?.stack);
     return reply({ error: e.message }, 500, cors);
   }
 }
