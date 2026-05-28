@@ -2878,8 +2878,19 @@ async function triggerAnalysis(sym) {
     setLoadingStep(0);
     const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
     const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}`;
-    setLoadingStep(1); const res=await fetch(url); setLoadingStep(2); const result=await res.json();
-    if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
+    setLoadingStep(1);
+    const res = await fetch(url);
+    setLoadingStep(2);
+
+    // Parse response — Vercel may return non-JSON on timeout or function crash
+    let result;
+    try {
+      result = await res.json();
+    } catch (_) {
+      const txt = await res.text().catch(() => `HTTP ${res.status}`);
+      throw new Error(txt.length > 10 ? txt.slice(0, 300) : `HTTP ${res.status} — server error`);
+    }
+    if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`);
     setLoadingStep(3);
     const ind=result.indicators||{}, analysis=result.analysis||{};
     if(!ind.price) throw new Error('Analysis returned invalid data');

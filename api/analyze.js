@@ -474,9 +474,20 @@ export default async function handler(req) {
     if (!claudeRes.ok) throw new Error('Claude: ' + (await claudeRes.text()).slice(0, 200));
 
     // ── Step 3: Parse and enrich ──────────────────────────────────────────────
-    const cd  = await claudeRes.json();
-    const raw = cd.content[0].text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    const finalAnalysis = JSON.parse(raw);
+    const cd = await claudeRes.json();
+
+    // Guard: Anthropic may return an error object instead of content
+    if (!cd.content?.[0]?.text) {
+      const detail = cd.error?.message || cd.type || JSON.stringify(cd).slice(0, 200);
+      throw new Error(`Claude returned no content: ${detail}`);
+    }
+
+    // Robust JSON extraction — handles preamble/postamble text from the model
+    const responseText = cd.content[0].text.trim();
+    const jsonMatch    = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error(`Claude response is not JSON: ${responseText.slice(0, 200)}`);
+
+    const finalAnalysis = JSON.parse(jsonMatch[0]);
 
     if (finalAnalysis.knownFundamentals) {
       const cf = finalAnalysis.knownFundamentals;
