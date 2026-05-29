@@ -290,7 +290,7 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1200,
+        max_tokens: 1600,
         messages: [{ role: 'user', content: prompt }]
       }),
       signal: AbortSignal.timeout(15000)
@@ -303,16 +303,21 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
     }
 
     const cd  = await claudeRes.json();
+    const stopReason = cd.stop_reason;
     const raw = cd.content?.[0]?.text?.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     if (!raw) {
-      console.error('[analyze] Claude returned no text content:', JSON.stringify(cd).slice(0, 200));
+      console.error('[analyze] Claude returned no text. stop_reason:', stopReason, JSON.stringify(cd).slice(0, 200));
       return reply({ error: 'Claude returned empty response' }, 500, cors);
+    }
+    if (stopReason === 'max_tokens') {
+      console.error('[analyze] TRUNCATED by max_tokens. raw length:', raw.length, 'last 100:', raw.slice(-100));
+      return reply({ error: 'Analysis response was truncated — increase max_tokens' }, 500, cors);
     }
     let analysis;
     try {
       analysis = JSON.parse(raw);
     } catch (parseErr) {
-      console.error('[analyze] JSON.parse failed. raw:', raw.slice(0, 300));
+      console.error('[analyze] JSON.parse failed. stop_reason:', stopReason, 'raw:', raw.slice(0, 300));
       return reply({ error: 'Claude response was not valid JSON' }, 500, cors);
     }
 
