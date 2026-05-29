@@ -250,32 +250,19 @@ export default async function handler(req) {
           : `Yahoo Finance returned no fundamental data for ${symbol}. Fill ALL knownFundamentals fields from your training data.`)
       : `Yahoo Finance was unreachable. Fill ALL knownFundamentals fields from your training knowledge of ${name} (${symbol}). This is a well-known Indian company — provide realistic estimates based on its most recent financial year. Do NOT leave fields null unless truly not applicable.`;
 
-    const prompt = `You are a senior equity analyst covering Indian markets.
-Sector expertise: ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
+    const prompt = `Indian equity analyst. Sector: ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
 
-Analyse ${name} (NSE: ${symbol}).
+${name} (NSE: ${symbol}) — TECHNICAL DATA:
+Price ₹${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today) | RSI ${rsi.toFixed(1)} | MACD ${macd.toFixed(2)} vs ${macdSignal.toFixed(2)} (${macd > macdSignal ? 'bull' : 'bear'}) | BB ${bbPct.toFixed(0)}% | 30d ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'} | 52w ₹${low52w.toFixed(2)}–₹${high52w.toFixed(2)} (${(((price-low52w)/(high52w-low52w))*100).toFixed(0)}%) | Vol ${(volRatio*100).toFixed(0)}% of avg
+${smaLine(sma20, 'SMA20')} ${smaLine(sma50, 'SMA50')}
+Signal score: ${techScoreNorm}/10
 
-━━━ TECHNICAL DATA ━━━
-- Price: ₹${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today)
-${smaLine(sma20, '20-day SMA')}
-${smaLine(sma50, '50-day SMA')}
-- RSI(14): ${rsi.toFixed(1)} — ${rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : rsi < 45 ? 'weakening' : 'healthy'}
-- MACD: ${macd.toFixed(2)} vs Signal ${macdSignal.toFixed(2)} → ${macd > macdSignal ? 'BULLISH' : 'BEARISH'} crossover
-- Bollinger Band position: ${bbPct.toFixed(0)}% (Upper ₹${bbUpper.toFixed(2)} | Lower ₹${bbLower.toFixed(2)}) — ${bbPct < 20 ? 'near lower band (oversold zone)' : bbPct > 80 ? 'near upper band (extended/caution)' : 'mid-band (room to run)'}
-- 30d return: ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'}
-- 52w range: ₹${low52w.toFixed(2)} – ₹${high52w.toFixed(2)} | at ${(((price-low52w)/(high52w-low52w))*100).toFixed(0)}% of range
-- Volume vs 20d avg: ${(volRatio*100).toFixed(0)}%${volRatio > 1.5 ? ' (HIGH — conviction move)' : volRatio < 0.6 ? ' (LOW — weak conviction)' : ' (average)'}
+FUNDAMENTALS: ${fundDataStatus}
 
-━━━ SIGNAL SCORE: ${techScoreNorm}/10 ━━━
-→ ${techScore >= 6 ? 'Strong bullish' : techScore >= 2 ? 'Mild bullish' : techScore >= -2 ? 'Neutral/mixed' : techScore >= -6 ? 'Mild bearish' : 'Strong bearish'}
+Reply ONLY with compact JSON (no markdown):
+{"signal":"BUY"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"1 sentence","technicalNarrative":"1-2 sentences on key indicators","valuationContext":"1 sentence on PE vs peers","entryExitLevels":{"buyZone":"₹X–₹Y","breakoutLevel":"₹X","technicalTarget":"₹X–₹Y","stopLoss":"₹X"},"investorAction":"BUY_GRADUALLY"|"WAIT_FOR_DIP"|"BUY_ON_BREAKOUT"|"HOLD_EXISTING"|"REDUCE","investorActionReason":"1 sentence","confidenceReason":"1 sentence","keyRisks":["risk1","risk2","risk3"],"support":"₹X","resistance":"₹X","outlook":"1 sentence","technicalPoints":["pt1","pt2","pt3"],"knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
 
-━━━ FUNDAMENTALS ━━━
-${fundDataStatus}
-
-Reply ONLY with valid JSON (no markdown, no code fences):
-{"signal":"BUY"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"1-sentence overall verdict","technicalNarrative":"2-3 sentences that CONNECT the specific numbers above — e.g. price vs SMA, what RSI + BB together imply, whether MACD confirms, and whether momentum is sustainable or extended","valuationContext":"2 sentences: is the current PE stretched or fair vs sector peers? If analyst target exists, explicitly say whether your technical target is a shorter-term milestone toward it or disagrees with it and why","entryExitLevels":{"buyZone":"₹XXX–₹YYY — reason (e.g. near support/SMA20/pullback zone)","breakoutLevel":"₹XXX — what this level confirms and why it matters","technicalTarget":"₹XXX–₹YYY (2-4 week horizon)","stopLoss":"₹XXX — state clearly that bullish thesis weakens below this"},"investorAction":"BUY_GRADUALLY"|"WAIT_FOR_DIP"|"BUY_ON_BREAKOUT"|"HOLD_EXISTING"|"REDUCE","investorActionReason":"1-2 sentences giving the research rationale — what technical or fundamental condition supports this view, and what would change it. Do NOT use first-person portfolio advice language","confidenceReason":"1-2 sentences listing the SPECIFIC factors preventing HIGH confidence (e.g. BB position above 80%, near 52w high resistance, PE premium vs peers, volume below average, macro risk)","keyRisks":["concise risk phrase 1","concise risk phrase 2","concise risk phrase 3"],"support":"₹XXX — reason","resistance":"₹XXX — reason","outlook":"2-4 week price outlook","technicalPoints":["point 1","point 2","point 3"],"knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
-
-IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching Yahoo Finance format — 0.008 means 0.8% yield, NOT the number 0.8. roe, roce, operatingMargin, revenueGrowth, earningsGrowth are percentage values (e.g. 21.5 means 21.5%). debtToEquity is a ratio (e.g. 7.8 means 7.8x).`;
+knownFundamentals: dividendYield=decimal (0.008=0.8%); roe/roce/margins/growth=percent number; debtToEquity=ratio.`;
 
     // ── 7. Claude ────────────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -287,7 +274,7 @@ IMPORTANT for knownFundamentals: dividendYield must be a decimal ratio matching 
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1600,
+        max_tokens: 900,
         messages: [{ role: 'user', content: prompt }]
       }),
       signal: AbortSignal.timeout(15000)
