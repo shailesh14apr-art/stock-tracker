@@ -11,24 +11,17 @@ const YF_HEADERS = {
   'Origin': 'https://finance.yahoo.com',
 };
 
-// Race query1 and query2 in parallel — whichever responds first wins
-// We explicitly cancel the loser body to avoid dangling streams in the edge runtime
+// Race query1 and query2 — resolve as soon as either succeeds, don't wait for the loser
 async function fetchYF(path, timeout = 4000) {
   try {
-    const results = await Promise.allSettled([
-      fetch(`https://query1.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) }),
-      fetch(`https://query2.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) }),
+    return await Promise.any([
+      fetch(`https://query1.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) })
+        .then(r => { if (!r.ok) throw new Error(String(r.status)); return r; }),
+      fetch(`https://query2.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) })
+        .then(r => { if (!r.ok) throw new Error(String(r.status)); return r; }),
     ]);
-    let winner = null;
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.ok) {
-        if (!winner) { winner = r.value; }
-        else { r.value.body?.cancel(); } // discard loser to free the stream
-      }
-    }
-    return winner;
   } catch (_) {
-    return null;
+    return null; // both failed or timed out
   }
 }
 
@@ -53,6 +46,12 @@ export default async function handler(req) {
     'Access-Control-Allow-Headers': 'Content-Type',
   };
   if (req.method === 'OPTIONS') return reply(null, 204, cors);
+
+  // Block non-browser clients (bots, scrapers, automated scripts)
+  const ua = req.headers.get('user-agent') || '';
+  if (!ua.includes('Mozilla') && !ua.includes('AppleWebKit')) {
+    return reply({ error: 'Forbidden' }, 403, cors);
+  }
 
   const p      = new URL(req.url).searchParams;
   const symbol = p.get('symbol');
@@ -95,10 +94,13 @@ export default async function handler(req) {
     const today    = new Date();
     const oneYrAgo = new Date(today); oneYrAgo.setFullYear(today.getFullYear() - 1);
 
-    // ── 1. OHLCV (1yr daily) ─────────────────────────────────────────────────
-    const chartRes = await fetchYF(
-      `/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&period1=${Math.floor(oneYrAgo/1000)}&period2=${Math.floor(today/1000)}`
-    );
+    // ── 1+2. Fetch OHLCV and fundamentals all in parallel ────────────────────
+    const [chartRes, _r7, _rQS] = await Promise.all([
+      fetchYF(`/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&period1=${Math.floor(oneYrAgo/1000)}&period2=${Math.floor(today/1000)}`),
+      fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`).catch(() => null),
+      fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`).catch(() => null),
+    ]);
+
     if (!chartRes) throw new Error(`Could not reach Yahoo Finance for ${symbol}`);
 
     const chartData = await chartRes.json();
@@ -119,14 +121,9 @@ export default async function handler(req) {
     const volumes = rows.map(r => r.v);
     if (closes.length < 20) throw new Error(`Only ${closes.length} data points — need 20+`);
 
-    // ── 2. Fundamentals: two passes in parallel ──────────────────────────────
+    // ── 2. Process fundamentals (already fetched above) ──────────────────────
     let yfFund = {};
     let yfFetchedAny = false;
-
-    const [_r7, _rQS] = await Promise.all([
-      fetchYF(`/v7/finance/quote?symbols=${encodeURIComponent(yahooSym)}`).catch(() => null),
-      fetchYF(`/v10/finance/quoteSummary/${encodeURIComponent(yahooSym)}?modules=financialData,defaultKeyStatistics,summaryDetail`).catch(() => null),
-    ]);
 
     // 2a. v7/finance/quote — market cap, P/E, EPS, dividends
     try {
