@@ -2915,10 +2915,26 @@ function renderError(sym,msg) {
 // ── TRIGGER ANALYSIS (AI only — updates scorecard/deepdive in place) ───────────
 async function triggerAnalysis(sym) {
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
-  activeStock=sym; renderLoadingState(sym,name);
-  const stored=getStoredData(); stored[sym]=null; localStorage.setItem('stockData',JSON.stringify(stored)); renderSidebar();
+  activeStock=sym;
+  // Show spinner in-place inside AI scorecard panel only
+  const scEl=document.getElementById('ai-scorecard-wrap');
+  const ddEl=document.getElementById('ai-deepdive-wrap');
+  if (scEl) {
+    scEl.innerHTML=`<div class="scorecard-v2"><div class="scorecard-empty"><div class="spinner" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--text3)">Running AI analysis…</div></div></div>`;
+    if(ddEl) ddEl.innerHTML='';
+  } else {
+    // Page not rendered yet — fetch data first then re-enter
+    const existingRec=getStoredData()[sym];
+    if(existingRec){ renderAnalysis(existingRec); }
+    else { fetchDataOnly(sym); return; }
+    // After renderAnalysis the wrap IDs now exist — update them
+    const sc2=document.getElementById('ai-scorecard-wrap');
+    const dd2=document.getElementById('ai-deepdive-wrap');
+    if(sc2) sc2.innerHTML=`<div class="scorecard-v2"><div class="scorecard-empty"><div class="spinner" style="margin:0 auto 12px"></div><div style="font-size:13px;color:var(--text3)">Running AI analysis…</div></div></div>`;
+    if(dd2) dd2.innerHTML='';
+  }
+  const existingData=getStoredData()[sym]||{};
   try {
-    setLoadingStep(0);
     const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
     const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}`;
     const res=await fetch(url); const result=await res.json();
