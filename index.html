@@ -2792,6 +2792,7 @@ function renderSidebar() {
 function selectStock(sym) {
   if (sym !== activeStock) { _chatMsgs = []; }
   activeStock = sym; renderSidebar();
+  _startPriceRefresh(sym);
   const d = getStoredData()[sym];
   if (!d) { renderPending(sym); return; }
   renderAnalysis(d);
@@ -2821,10 +2822,10 @@ function renderPending(sym) {
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym);
   document.getElementById('main-content').innerHTML=`
     <div class="stock-header"><div class="stock-header-left"><h2>${sym}</h2><div class="meta"><span class="sector-badge">${k?(INDUSTRY_CONFIG[k.sector]?.label||k.sector):'Unknown'}</span></div></div></div>
-    <div class="loading-state"><div class="empty-icon" style="font-size:48px">⏳</div><div class="loading-title">No analysis yet</div>
-      <div class="loading-steps" style="font-size:13px;color:var(--text3)">Click <strong>Analyse Now</strong> to run a live AI analysis.</div>
-      <button onclick="triggerAnalysis('${sym}')" style="margin-top:8px;padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">⚡ Analyse Now</button>
+    <div class="loading-state"><div class="spinner"></div><div class="loading-title">Loading ${sym}…</div>
+      <div class="loading-steps" style="font-size:13px;color:var(--text3)">Fetching live price, chart and fundamentals</div>
     </div>`;
+  fetchDataOnly(sym);
 }
 function renderLoadingState(sym,name) {
   document.getElementById('main-content').innerHTML=`
@@ -2879,10 +2880,98 @@ async function triggerAnalysis(sym) {
     const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
   }
 }
+// ── FETCH DATA ONLY (no AI) ────────────────────────────────────────────────────
+async function fetchDataOnly(sym) {
+  const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  activeStock=sym;
+  document.getElementById('main-content').innerHTML=`
+    <div class="stock-header"><div class="stock-header-left"><h2>${name}</h2><div class="meta"><span class="updated-text">NSE: ${sym}</span></div></div></div>
+    <div class="loading-state"><div class="spinner"></div><div class="loading-title">Loading ${sym}…</div>
+      <div class="loading-steps" style="font-size:13px;color:var(--text3)">📡 Fetching live price, chart data &amp; fundamentals</div>
+    </div>`;
+  const stored=getStoredData(); stored[sym]=null; localStorage.setItem('stockData',JSON.stringify(stored)); renderSidebar();
+  try {
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1`;
+    const res=await fetch(url); const result=await res.json();
+    if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
+    const ind=result.indicators||{};
+    if(!ind.price) throw new Error('No price data returned');
+    const record={
+      symbol:sym, name, sector,
+      lastUpdated:new Date().toISOString(),
+      price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
+      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
+      targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
+      analysts:{buy:0,hold:0,sell:0},
+      ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
+      keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
+    };
+    storeAnalysis(sym,record); logEvent('stock_data_fetch',{symbol:sym,sector}); renderSidebar(); renderAnalysis(record);
+  } catch(err) {
+    renderError(sym,err.message);
+    const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
+  }
+}
+
+async function refreshData(sym) {
+  const existing=getStoredData()[sym];
+  const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  try {
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1`;
+    const res=await fetch(url); const result=await res.json();
+    if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
+    const ind=result.indicators||{};
+    if(!ind.price) throw new Error('No price data returned');
+    const record={
+      ...existing,
+      symbol:sym, name, sector,
+      lastUpdated:new Date().toISOString(),
+      price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
+      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
+      ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
+    };
+    storeAnalysis(sym,record); renderSidebar(); renderAnalysis(record);
+  } catch(err) {
+    alert('Refresh failed: '+err.message);
+  }
+}
+
+// ── AUTO PRICE REFRESH ─────────────────────────────────────────────────────────
+let _priceTimer=null;
+function _startPriceRefresh(sym) {
+  _stopPriceRefresh();
+  _priceTimer=setInterval(async()=>{
+    if(activeStock!==sym) return _stopPriceRefresh();
+    const p=await fetchLatestPrice(sym);
+    if(!p||activeStock!==sym) return;
+    const stored=getStoredData(), rec=stored[sym];
+    if(!rec) return;
+    if(p.price!=null) rec.price.current=p.price;
+    if(p.changePct!=null) rec.price.changePercent=p.changePct;
+    if(p.high52!=null) rec.price.weekHigh52=p.high52;
+    if(p.low52!=null) rec.price.weekLow52=p.low52;
+    storeAnalysis(sym,rec);
+    const priceEl=document.getElementById('live-price');
+    const changeEl=document.getElementById('live-change');
+    if(priceEl) priceEl.textContent='₹'+(p.price||0).toLocaleString('en-IN');
+    if(changeEl&&p.changePct!=null){
+      const chg=p.changePct;
+      changeEl.style.color=chg>=0?'var(--green)':'var(--red)';
+      changeEl.textContent=`${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}% · 52W: ₹${rec.price?.weekLow52||'—'} – ₹${rec.price?.weekHigh52||'—'}`;
+    }
+    renderSidebar();
+  },30000);
+}
+function _stopPriceRefresh() {
+  if(_priceTimer){clearInterval(_priceTimer);_priceTimer=null;}
+}
+
 function addToWatchlist(sym) {
   const wl=getWatchlist();
   if(!wl.includes(sym)){ wl.push(sym); saveWatchlist(wl); logEvent('watchlist_add',{symbol:sym}); }
-  closeModal(); renderSidebar(); triggerAnalysis(sym);
+  closeModal(); renderSidebar(); fetchDataOnly(sym);
 }
 function removeFromWatchlist(sym) {
   const wl=getWatchlist(), idx=wl.indexOf(sym);
@@ -2980,7 +3069,15 @@ function renderSRBar(record) {
 // AI Deep Dive (collapsible bottom section) — 5-block playbook
 function renderDeepDive(record) {
   const a = record.aiAnalysis;
-  if (!a) return '';
+  if (!a) return `
+    <div class="dd-wrap" style="border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);padding:18px 22px;display:flex;align-items:center;gap:16px;">
+      <div style="font-size:28px">🔍</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">AI Deep Dive</div>
+        <div style="font-size:12px;color:var(--text3)">Run AI analysis to get signal, entry/exit levels, key risks and full commentary.</div>
+      </div>
+      <button onclick="triggerAnalysis('${record.symbol}')" style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;">⚡ Analyse Now</button>
+    </div>`;
 
   const ts = record.lastUpdated
     ? new Date(record.lastUpdated).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -3103,7 +3200,7 @@ function renderDeepDive(record) {
         ${outlookHtml}
         <div class="dd-footer" style="margin-top:10px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text3)">
           <span>⏱ ${ts} · Yahoo Finance + Claude Sonnet</span>
-          <button class="dd-refresh" onclick="triggerAnalysis('${record.symbol}')">↺ Refresh</button>
+          <button class="dd-refresh" onclick="triggerAnalysis('${record.symbol}')">⚡ Re-analyse AI</button>
         </div>
         <div class="dd-disclaimer" style="font-size:10px;color:var(--text3);line-height:1.55;margin-top:10px">
           ⚠️ <strong>SEBI Disclaimer:</strong> This AI-generated research analysis is for informational purposes only
@@ -3244,12 +3341,13 @@ function renderAIScorecard(record) {
   const a   = record.aiAnalysis;
   const ind = record.aiIndicators;
 
-  if (!a || !ind) {
+  if (!a) {
     return `
       <div class="scorecard-v2">
         <div class="scorecard-empty">
           <div style="font-size:36px">🤖</div>
-          <div style="font-size:13px;color:var(--text3)">No AI analysis yet</div>
+          <div style="font-size:13px;color:var(--text3);margin-bottom:6px">AI analysis not yet run</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Charts &amp; metrics loaded. Request AI signal when ready.</div>
           <button onclick="triggerAnalysis('${record.symbol}')"
             style="padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">
             ⚡ Analyse Now
@@ -3409,15 +3507,15 @@ function renderAnalysis(d) {
       <div class="hdr-v2-right">
   <div class="hdr-v2-price-col">
     <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
-      <div class="hdr-v2-price">₹${(d.price?.current || 0).toLocaleString('en-IN')}</div>
+      <div class="hdr-v2-price" id="live-price">₹${(d.price?.current || 0).toLocaleString('en-IN')}</div>
       ${d.signal && a.signal ? `<span class="ai-pill ${d.signal}">${pilotLabel}</span>` : ''}
     </div>
-    <div class="hdr-v2-change" style="color:${chg >= 0 ? 'var(--green)' : 'var(--red)'}">
+    <div class="hdr-v2-change" id="live-change" style="color:${chg >= 0 ? 'var(--green)' : 'var(--red)'}">
       ${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}%
       &ensp;·&ensp;52W: ₹${d.price?.weekLow52 || '—'} – ₹${d.price?.weekHigh52 || '—'}
     </div>
   </div>
-  <button class="refresh-btn" onclick="triggerAnalysis('${d.symbol}')">↺ Refresh</button>
+  <button class="refresh-btn" onclick="refreshData('${d.symbol}')">↺ Refresh</button>
 </div>
     </div>
 
@@ -3443,7 +3541,7 @@ function renderAnalysis(d) {
           ${hasChart
             ? `<div class="price-canvas-wrap"><canvas id="price-chart"></canvas></div>
                <div class="vol-canvas-wrap" style="height:62px;margin-top:4px"><canvas id="volume-chart"></canvas></div>`
-            : `<div class="chart-no-data">↺ Click <strong>Refresh</strong> to load the price chart</div>`}
+            : `<div class="chart-no-data">No chart data available — try refreshing</div>`}
           ${renderSRBar(d)}
         </div>
 

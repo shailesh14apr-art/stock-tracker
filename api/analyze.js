@@ -82,6 +82,8 @@ export default async function handler(req) {
     }
   }
 
+  const dataOnly = p.get('dataOnly') === '1';
+
   let fund = {};
   try { fund = JSON.parse(p.get('fund') || '{}'); } catch (_) {}
 
@@ -229,6 +231,26 @@ export default async function handler(req) {
     const ema20Series  = emaSeriesArr(closes, 20);
     const ema50Series  = closes.length >= 50  ? emaSeriesArr(closes, 50)  : null;
     const ema200Series = closes.length >= 200 ? emaSeriesArr(closes, 200) : null;
+
+    // ── 5b. dataOnly — return technicals + chart without calling Claude ─────
+    if (dataOnly) {
+      return reply({
+        symbol: symbol.toUpperCase(), name,
+        indicators: {
+          price: +price.toFixed(2), changePct: +changePct.toFixed(2),
+          sma20: +sma20.toFixed(2), sma50: sma50 ? +sma50.toFixed(2) : null,
+          rsi: +rsi.toFixed(1), macd: +macd.toFixed(2), macdSignal: +macdSignal.toFixed(2),
+          bbUpper: +bbUpper.toFixed(2), bbLower: +bbLower.toFixed(2), bbPct: +bbPct.toFixed(1),
+          change30d: change30d !== null ? +change30d.toFixed(2) : null,
+          high52w: +high52w.toFixed(2), low52w: +low52w.toFixed(2),
+          volRatio: +volRatio.toFixed(2), techScore: techScoreNorm, scores,
+        },
+        fundamentals: fund,
+        ohlcv: rows,
+        ema20Series, ema50Series, ema200Series,
+        fetchedAt: new Date().toISOString()
+      }, 200, cors);
+    }
 
     // ── 6. Claude prompt ─────────────────────────────────────────────────────
     const smaLine = (v, l) => v != null
