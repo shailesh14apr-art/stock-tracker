@@ -664,10 +664,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .content-v2 { display: flex; flex-direction: column; gap: 0; }
 .main-row-v2 {
   display: grid;
-  grid-template-columns: 1fr 308px;
+  grid-template-columns: 1fr 320px;
   gap: 0;
   padding: 0;
-  align-items: start;
+  align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
 @media (max-width: 1060px) {
@@ -720,6 +720,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   padding: 18px 16px;
   display: flex; flex-direction: column; gap: 12px;
   min-height: 320px;
+  height: 100%;
+  box-sizing: border-box;
 }
 [data-theme="light"] .scorecard-v2 {
   background: linear-gradient(135deg, #f0f9ff, #e8f4fd);
@@ -3220,8 +3222,8 @@ function renderDeepDive(record) {
   const eel = a.entryExitLevels || {};
   const splitPrice = s => {
     if (!s) return { price: '', reason: '' };
-    const m = s.match(/^(₹[\d,\.–\-]+(?:\s*–\s*₹[\d,\.]+)?)(.*)/);
-    return m ? { price: m[1].trim(), reason: m[2].replace(/^[\s\-–—]+/, '').trim() } : { price: '', reason: s };
+    const m = s.match(/^(₹[\d,\.]+(?:\s*[–\-]\s*₹[\d,\.]+)?)(.*)/);
+    return m ? { price: m[1].trim(), reason: m[2].replace(/^[\s\-–—:]+/, '').trim() } : { price: '', reason: s };
   };
   const buyZ  = splitPrice(eel.buyZone);
   const brkL  = splitPrice(eel.breakoutLevel);
@@ -3545,7 +3547,7 @@ function renderAIScorecard(record) {
   ].filter(Boolean).slice(0, 6).join('');
 
   const ts = record.lastUpdated
-    ? new Date(record.lastUpdated).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    ? new Date(record.lastUpdated).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     : '—';
 
   return `
@@ -3606,9 +3608,13 @@ function renderAIScorecard(record) {
       <!-- Mini indicator grid -->
       <div class="mini-grid">${miniCells}</div>
 
-      <!-- Timestamp -->
-      <div style="font-size:9.5px;color:var(--text3);text-align:center;padding-top:2px">
-        Updated ${ts}
+      <!-- Timestamp + Re-analyse -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border)">
+        <div style="font-size:9.5px;color:var(--text3)">Updated ${ts}</div>
+        <button onclick="triggerAnalysis('${record.symbol}')"
+          style="font-size:10px;font-weight:700;padding:4px 10px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;letter-spacing:.2px;">
+          ↺ Re-analyse
+        </button>
       </div>
     </div>`;
 }
