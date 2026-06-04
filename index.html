@@ -2027,6 +2027,11 @@ async function showApp() {
     renderSidebar();
     const wl = getWatchlist();
     if (wl.length > 0) selectStock(wl[0]);
+    // Background-fetch data for other watchlist stocks (staggered to avoid hammering API)
+    const stored = getStoredData();
+    wl.slice(1).forEach((sym, i) => {
+      if (!stored[sym]) setTimeout(() => _fetchDataBackground(sym), (i + 1) * 3000);
+    });
   }
 }
 
@@ -2850,34 +2855,72 @@ function renderError(sym,msg) {
     </div>`;
 }
 
-// ── TRIGGER ANALYSIS ───────────────────────────────────────────────────────────
+// ── TRIGGER ANALYSIS (AI only — updates scorecard/deepdive in place) ───────────
 async function triggerAnalysis(sym) {
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
-  activeStock=sym; renderLoadingState(sym,name);
-  const stored=getStoredData(); stored[sym]=null; localStorage.setItem('stockData',JSON.stringify(stored)); renderSidebar();
+  const isActive = activeStock === sym;
+
+  // If viewing this stock: show spinner only inside AI panels, keep rest of page
+  if (isActive) {
+    const sc = document.getElementById('ai-scorecard-wrap');
+    const dd = document.getElementById('ai-deepdive-wrap');
+    if (sc) sc.innerHTML = `<div class="scorecard-v2"><div class="scorecard-empty">
+      <div class="spinner" style="width:36px;height:36px;border-width:3px"></div>
+      <div style="font-size:13px;font-weight:600;margin-top:14px">Claude Sonnet analysing…</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Fetching data · Computing signals · ~15s</div>
+    </div></div>`;
+    if (dd) dd.innerHTML = '';
+  } else {
+    // Not currently viewing — just run in background
+    activeStock = sym;
+  }
+
+  const existingData = getStoredData()[sym];
   try {
-    setLoadingStep(0);
     const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
     const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}`;
-    setLoadingStep(1); const res=await fetch(url); setLoadingStep(2); const result=await res.json();
+    const res=await fetch(url); const result=await res.json();
     if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
-    setLoadingStep(3);
     const ind=result.indicators||{}, analysis=result.analysis||{};
     if(!ind.price) throw new Error('Analysis returned invalid data');
     const record={
+      ...existingData,
       symbol:sym, name, sector, signal:analysis.signal||'HOLD', signalReason:analysis.summary||'',
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
       aiAnalysis:analysis, aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
       targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
       analysts:{buy:0,hold:0,sell:0},
-      ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
+      ohlcv:result.ohlcv||existingData?.ohlcv||[],
+      ema20Series:result.ema20Series||existingData?.ema20Series||[],
+      ema50Series:result.ema50Series||existingData?.ema50Series||[],
+      ema200Series:result.ema200Series||existingData?.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
-    storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar(); renderAnalysis(record);
+    storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar();
+    if (activeStock === sym) {
+      // Update AI panels in-place without touching chart / metrics
+      const sc = document.getElementById('ai-scorecard-wrap');
+      const dd = document.getElementById('ai-deepdive-wrap');
+      if (sc && dd) {
+        sc.innerHTML = renderAIScorecard(record);
+        dd.innerHTML = renderDeepDive(record);
+        const pill = document.getElementById('ai-signal-pill-wrap');
+        const pilotLabel = { BUY: '↑ Buy', HOLD: '→ Hold', REVIEW: '↓ Review' }[record.signal] || record.signal;
+        if (pill) pill.innerHTML = `<span class="ai-pill ${record.signal}">${pilotLabel}</span>`;
+      } else {
+        renderAnalysis(record); // fallback if IDs not found
+      }
+    }
   } catch(err) {
-    renderError(sym,err.message);
-    const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
+    if (activeStock === sym) {
+      const sc = document.getElementById('ai-scorecard-wrap');
+      if (sc) sc.innerHTML = `<div class="scorecard-v2"><div class="scorecard-empty">
+        <div style="font-size:28px">⚠️</div>
+        <div style="font-size:13px;color:var(--red);margin:8px 0 12px">${err.message}</div>
+        <button onclick="triggerAnalysis('${sym}')" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">↺ Try Again</button>
+      </div></div>`;
+    }
   }
 }
 // ── FETCH DATA ONLY (no AI) ────────────────────────────────────────────────────
@@ -2907,11 +2950,36 @@ async function fetchDataOnly(sym) {
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
-    storeAnalysis(sym,record); logEvent('stock_data_fetch',{symbol:sym,sector}); renderSidebar(); renderAnalysis(record);
+    storeAnalysis(sym,record); logEvent('stock_data_fetch',{symbol:sym,sector}); renderSidebar();
+    if (activeStock === sym) renderAnalysis(record);
   } catch(err) {
-    renderError(sym,err.message);
+    if (activeStock === sym) renderError(sym,err.message);
     const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
   }
+}
+
+// Background data fetch — stores without changing the screen
+async function _fetchDataBackground(sym) {
+  if (getStoredData()[sym]) return; // already have data
+  const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  try {
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1`;
+    const res=await fetch(url); const result=await res.json();
+    if(!res.ok||result.error) return;
+    const ind=result.indicators||{}; if(!ind.price) return;
+    const record={
+      symbol:sym, name, sector,
+      lastUpdated:new Date().toISOString(),
+      price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
+      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
+      targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
+      analysts:{buy:0,hold:0,sell:0},
+      ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
+      keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
+    };
+    storeAnalysis(sym,record); renderSidebar();
+  } catch(_) {}
 }
 
 async function refreshData(sym) {
@@ -3508,7 +3576,7 @@ function renderAnalysis(d) {
   <div class="hdr-v2-price-col">
     <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
       <div class="hdr-v2-price" id="live-price">₹${(d.price?.current || 0).toLocaleString('en-IN')}</div>
-      ${d.signal && a.signal ? `<span class="ai-pill ${d.signal}">${pilotLabel}</span>` : ''}
+      <span id="ai-signal-pill-wrap">${d.signal && a.signal ? `<span class="ai-pill ${d.signal}">${pilotLabel}</span>` : ''}</span>
     </div>
     <div class="hdr-v2-change" id="live-change" style="color:${chg >= 0 ? 'var(--green)' : 'var(--red)'}">
       ${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}%
@@ -3546,7 +3614,7 @@ function renderAnalysis(d) {
         </div>
 
         <!-- RIGHT: AI Scorecard -->
-        ${renderAIScorecard(d)}
+        <div id="ai-scorecard-wrap">${renderAIScorecard(d)}</div>
 
       </div><!-- /main-row-v2 -->
 
@@ -3556,7 +3624,7 @@ function renderAnalysis(d) {
       </div>
 
       <!-- ── ROW 3: AI DEEP DIVE (collapsible) ── -->
-      <div class="deep-dive-v2">
+      <div class="deep-dive-v2" id="ai-deepdive-wrap">
         ${renderDeepDive(d)}
       </div>
 
