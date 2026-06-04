@@ -1944,7 +1944,7 @@ _auth.onAuthStateChanged(user => {
       return;
     }
     hideLanding();
-    syncWatchlistFromFirebase().then(() => {
+    Promise.all([syncWatchlistFromFirebase(), syncStockDataFromFirebase()]).then(() => {
       overlay.classList.add('fade-out');
       setTimeout(() => overlay.classList.add('hidden'), 400);
       const firstName = (user.displayName||'').split(' ')[0] || user.email?.split('@')[0] || 'there';
@@ -2300,6 +2300,7 @@ async function loadKnownStocks() {
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let activeStock=null, activeChart=null, priceChart=null, volChart=null;
 let currentRecord=null, currentTF='M3', fundDB={};
+const analyzingStocks = new Set();
 const TF_DAYS = { W1:5, M1:22, M3:65, M6:130, Y1:260 };
 
 // ── STORAGE ────────────────────────────────────────────────────────────────────
@@ -2311,12 +2312,40 @@ function getStoredData() {
   try {
     const d = JSON.parse(localStorage.getItem('stockData') || '{}');
     // Migrate legacy BUY_MORE → BUY for any cached records
-    Object.values(d).forEach(r => { if (r.signal) r.signal = normalizeSignal(r.signal); if (r.aiAnalysis?.signal) r.aiAnalysis.signal = normalizeSignal(r.aiAnalysis.signal); });
+    Object.values(d).forEach(r => { if (!r) return; if (r.signal) r.signal = normalizeSignal(r.signal); if (r.aiAnalysis?.signal) r.aiAnalysis.signal = normalizeSignal(r.aiAnalysis.signal); });
     return d;
   } catch { return {}; }
 }
-function storeAnalysis(sym,d) { const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a)); }
+function storeAnalysis(sym,d) {
+  const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a));
+  syncStockDataToFirebase(a);
+}
 function getWatchlist() { try{return JSON.parse(localStorage.getItem('watchlist')||'["TITAGARH"]');}catch{return['TITAGARH'];} }
+
+function writeStoredData(d) {
+  localStorage.setItem('stockData', JSON.stringify(d || {}));
+}
+
+function isNewerRecord(a, b) {
+  if (!a?.lastUpdated) return false;
+  if (!b?.lastUpdated) return true;
+  return new Date(a.lastUpdated).getTime() > new Date(b.lastUpdated).getTime();
+}
+
+function mergeStoredData(local, remote) {
+  const merged = { ...(remote || {}) };
+  Object.entries(local || {}).forEach(([sym, rec]) => {
+    if (!rec) return;
+    if (!merged[sym] || isNewerRecord(rec, merged[sym])) merged[sym] = rec;
+  });
+  return merged;
+}
+
+function syncStockDataToFirebase(data) {
+  if (!_currentUser) return;
+  _db.ref(`stockData/${_currentUser.uid}`).set(data || getStoredData())
+    .catch(err => console.warn('Could not sync stock data to Firebase:', err));
+}
 
 async function saveWatchlist(l) {
   localStorage.setItem('watchlist',JSON.stringify(l));
@@ -2334,6 +2363,18 @@ async function syncWatchlistFromFirebase() {
     if (fw && Array.isArray(fw)) { localStorage.setItem('watchlist', JSON.stringify(fw)); }
     else { await _db.ref(`watchlists/${_currentUser.uid}`).set(getWatchlist()); }
   } catch (err) { console.warn('Could not sync watchlist from Firebase:', err); }
+}
+
+async function syncStockDataFromFirebase() {
+  if (!_currentUser) return;
+  try {
+    const local = getStoredData();
+    const snapshot = await _db.ref(`stockData/${_currentUser.uid}`).once('value');
+    const remote = snapshot.val() || {};
+    const merged = mergeStoredData(local, remote);
+    writeStoredData(merged);
+    if (JSON.stringify(merged) !== JSON.stringify(remote)) syncStockDataToFirebase(merged);
+  } catch (err) { console.warn('Could not sync stock data from Firebase:', err); }
 }
 
 // ── AI CHAT HERO ─────────────────────────────────────────────────────────────
@@ -2742,7 +2783,7 @@ function renderMobileWatchlist() {
     : wl.map(sym => {
         const d = stored[sym], k = KNOWN_STOCKS.find(x => x.symbol === sym);
         const name   = d?.name || k?.name || sym;
-        const signal = d?.signal || (d === null ? 'LOADING' : 'PENDING');
+        const signal = analyzingStocks.has(sym) ? 'LOADING' : (d?.signal || 'PENDING');
         const price  = d?.price?.current ? '₹' + d.price.current.toLocaleString('en-IN') : '—';
         const isActive = activeStock === sym;
         return `<div class="stock-card${isActive ? ' active' : ''}" onclick="selectStockMobile('${sym}')" style="${isActive ? 'border-left:3px solid var(--accent);' : ''}">
@@ -2772,7 +2813,7 @@ function renderSidebar() {
   else { lastBar.style.display = 'none'; }
   document.getElementById('watchlist-container').innerHTML = wl.map(sym=>{
     const d=stored[sym], k=KNOWN_STOCKS.find(x=>x.symbol===sym);
-    const name=d?.name||k?.name||sym, signal=d?.signal||(d===null?'LOADING':'PENDING');
+    const name=d?.name||k?.name||sym, signal=analyzingStocks.has(sym)?'LOADING':(d?.signal||'PENDING');
     const price=d?.price?.current?'₹'+d.price.current.toLocaleString('en-IN'):'—';
     const upsidePct=d?.targets?.average&&d?.price?.current?((d.targets.average-d.price.current)/d.price.current)*100:null;
     let upsideText = signal==='LOADING' ? 'Analysing…' : signal==='PENDING' ? 'Pending analysis' : '—';
@@ -2874,25 +2915,10 @@ function renderError(sym,msg) {
 // ── TRIGGER ANALYSIS (AI only — updates scorecard/deepdive in place) ───────────
 async function triggerAnalysis(sym) {
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
-  const isActive = activeStock === sym;
-
-  // If viewing this stock: show spinner only inside AI panels, keep rest of page
-  if (isActive) {
-    const sc = document.getElementById('ai-scorecard-wrap');
-    const dd = document.getElementById('ai-deepdive-wrap');
-    if (sc) sc.innerHTML = `<div class="scorecard-v2"><div class="scorecard-empty">
-      <div class="spinner" style="width:36px;height:36px;border-width:3px"></div>
-      <div style="font-size:13px;font-weight:600;margin-top:14px">Claude Sonnet analysing…</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">Fetching data · Computing signals · ~15s</div>
-    </div></div>`;
-    if (dd) dd.innerHTML = '';
-  } else {
-    // Not currently viewing — just run in background
-    activeStock = sym;
-  }
-
-  const existingData = getStoredData()[sym];
+  activeStock=sym; renderLoadingState(sym,name);
+  const stored=getStoredData(); stored[sym]=null; localStorage.setItem('stockData',JSON.stringify(stored)); renderSidebar();
   try {
+    setLoadingStep(0);
     const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
     const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}`;
     const res=await fetch(url); const result=await res.json();
@@ -2966,10 +2992,9 @@ async function fetchDataOnly(sym) {
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
-    storeAnalysis(sym,record); logEvent('stock_data_fetch',{symbol:sym,sector}); renderSidebar();
-    if (activeStock === sym) renderAnalysis(record);
+    storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar(); renderAnalysis(record);
   } catch(err) {
-    if (activeStock === sym) renderError(sym,err.message);
+    renderError(sym,err.message);
     const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
   }
 }
@@ -3067,7 +3092,7 @@ function addToWatchlist(sym) {
 }
 function removeFromWatchlist(sym) {
   const wl=getWatchlist(), idx=wl.indexOf(sym);
-  if(idx>-1){wl.splice(idx,1);saveWatchlist(wl);logEvent('watchlist_remove',{symbol:sym});const s=getStoredData();delete s[sym];localStorage.setItem('stockData',JSON.stringify(s));}
+  if(idx>-1){wl.splice(idx,1);saveWatchlist(wl);logEvent('watchlist_remove',{symbol:sym});const s=getStoredData();delete s[sym];writeStoredData(s);syncStockDataToFirebase(s);}
   if(activeStock===sym){activeStock=null;document.getElementById('main-content').innerHTML='';}
   renderSidebar();
 }
