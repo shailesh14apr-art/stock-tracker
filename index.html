@@ -2027,10 +2027,16 @@ async function showApp() {
     renderSidebar();
     const wl = getWatchlist();
     if (wl.length > 0) selectStock(wl[0]);
-    // Background-fetch data for ALL watchlist stocks without stored price data (staggered)
+    // Background-fetch data for ALL watchlist stocks (staggered to avoid hammering API)
     wl.forEach((sym, i) => {
       setTimeout(() => _fetchDataBackground(sym), i * 4000);
     });
+    // Retry pass at 20s — catches any stocks where initial fetch failed
+    setTimeout(() => {
+      getWatchlist().forEach(sym => {
+        if (!getStoredData()[sym]?.price?.current) _fetchDataBackground(sym);
+      });
+    }, 20000);
   }
 }
 
@@ -2971,7 +2977,6 @@ async function fetchDataOnly(sym) {
 // Background data fetch — stores without changing the screen
 async function _fetchDataBackground(sym) {
   const existing = getStoredData()[sym];
-  if (existing === null) return; // actively being fetched (loading state)
   if (existing?.price?.current) return; // already has price data
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
   try {
@@ -2980,7 +2985,9 @@ async function _fetchDataBackground(sym) {
     const res=await fetch(url); const result=await res.json();
     if(!res.ok||result.error) return;
     const ind=result.indicators||{}; if(!ind.price) return;
+    const latest = getStoredData()[sym]; // re-read to get freshest state
     const record={
+      ...( (latest && latest !== null) ? latest : {} ), // preserve aiAnalysis if present
       symbol:sym, name, sector,
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
@@ -2991,6 +2998,11 @@ async function _fetchDataBackground(sym) {
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
     storeAnalysis(sym,record); renderSidebar();
+    // If user is currently viewing this stock, update the view
+    if (activeStock === sym) {
+      const sc = document.getElementById('ai-scorecard-wrap');
+      if (sc) renderAnalysis(record); // refresh view with new data
+    }
   } catch(_) {}
 }
 
