@@ -40,19 +40,24 @@ export default async function handler(req) {
 
   try {
     // ── 1. Fetch news from Yahoo Finance search API ───────────────────────────
-    // Searching by the raw NSE ticker (e.g. "TITAGARH.NS") often isn't recognised
-    // by Yahoo's search index for Indian small/mid-caps and falls back to generic
-    // trending news. Searching by company name returns far more relevant matches.
-    const newsRes = await fetchYF(
-      `/v1/finance/search?q=${encodeURIComponent(name)}&newsCount=12&quotesCount=0&enableFuzzyQuery=false&enableNavLinks=false`,
-      7000
-    );
+    // Yahoo's search/news index has patchy coverage of Indian small/mid-caps —
+    // a single query (ticker or name) often returns nothing, or falls back to
+    // unrelated trending news. Try a few query variants and merge the results.
+    const queries = [name, `${symbol}.NS`, symbol];
+    const seen = new Map();
+    for (const q of queries) {
+      const newsRes = await fetchYF(
+        `/v1/finance/search?q=${encodeURIComponent(q)}&newsCount=10&quotesCount=0&enableFuzzyQuery=false&enableNavLinks=false`,
+        7000
+      );
+      if (!newsRes) continue;
+      const newsData = await newsRes.json();
+      for (const n of (newsData?.news || [])) {
+        if (n?.link && !seen.has(n.link)) seen.set(n.link, n);
+      }
+    }
 
-    if (!newsRes) return reply({ news: [] }, 200, cors);
-
-    const newsData = await newsRes.json();
-    const rawNews  = newsData?.news || [];
-
+    const rawNews = [...seen.values()];
     if (!rawNews.length) return reply({ news: [] }, 200, cors);
 
     // ── 2. Clean, format and filter to articles that actually mention the company ──
@@ -70,7 +75,6 @@ export default async function handler(req) {
     };
 
     const articles = rawNews
-      .slice(0, 12)
       .map(n => ({
         title:  n.title  || '',
         url:    n.link   || '',
@@ -81,8 +85,10 @@ export default async function handler(req) {
               hour: '2-digit', minute: '2-digit',
             })
           : '',
+        publishedAt: n.providerPublishTime || 0,
       }))
-      .filter(n => n.title.length > 0 && isRelevant(n.title));
+      .filter(n => n.title.length > 0 && isRelevant(n.title))
+      .sort((a, b) => b.publishedAt - a.publishedAt);
 
     if (!articles.length) return reply({ news: [] }, 200, cors);
 
@@ -134,7 +140,7 @@ Reply ONLY with a valid JSON array — no markdown, no preamble:
     }
 
     const VALID = new Set(['positive', 'negative', 'neutral']);
-    const news = articles.slice(0, 5).map((a, i) => ({
+    const news = articles.slice(0, 5).map(({ publishedAt, ...a }, i) => ({
       ...a,
       sentiment: VALID.has(tagMap[i]) ? tagMap[i] : 'neutral',
     }));
