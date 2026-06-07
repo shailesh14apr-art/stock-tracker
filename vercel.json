@@ -12,6 +12,9 @@
     "api/chat.js": {
       "maxDuration": 30
     },
+    "api/news.js": {
+      "maxDuration": 20
+    },
     "api/weekly-update.js": {
       "maxDuration": 60
     }

@@ -156,6 +156,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .news-dot.neutral{background:var(--text3);}
 .news-title{font-size:12px;line-height:1.45;}
 .news-date{font-size:10px;color:var(--text3);margin-top:3px;}
+.news-meta-row{display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap;}
+.news-source{font-size:10px;color:var(--accent);font-weight:600;}
+.news-sentiment-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:capitalize;flex-shrink:0;align-self:flex-start;margin-top:2px;letter-spacing:.3px;}
+.news-sentiment-tag.positive{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.news-sentiment-tag.negative{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.news-sentiment-tag.neutral{background:var(--surface2);color:var(--text3);border:1px solid var(--border2);}
+.news-skeleton-line{height:10px;background:var(--border2);border-radius:4px;animation:newsShimmer 1.6s ease-in-out infinite;}
+.news-skeleton-line.short{width:45%;margin-top:7px;}
+@keyframes newsShimmer{0%,100%{opacity:.3;}50%{opacity:.65;}}
 .thesis-item{display:flex;gap:12px;align-items:center;padding:10px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;background:var(--surface2);}
 .thesis-icon{font-size:18px;flex-shrink:0;}
 .thesis-pillar{font-size:13px;font-weight:600;}
@@ -2849,7 +2858,7 @@ function selectStock(sym) {
   const d = getStoredData()[sym];
   if (!d) { renderPending(sym); return; }
   renderAnalysis(d);
-  // Update price in-place only — avoid a full re-render that could wipe AI scorecard
+  fetchNews(sym);
   fetchLatestPrice(sym).then(p => {
     if (!p || activeStock !== sym) return;
     const stored = getStoredData(), rec = stored[sym];
@@ -2968,8 +2977,10 @@ async function triggerAnalysis(sym) {
         const pill = document.getElementById('ai-signal-pill-wrap');
         const pilotLabel = { BUY: '↑ Buy', HOLD: '→ Hold', REVIEW: '↓ Review' }[record.signal] || record.signal;
         if (pill) pill.innerHTML = `<span class="ai-pill ${record.signal}">${pilotLabel}</span>`;
+        fetchNews(sym, true);
       } else {
         renderAnalysis(record); // fallback if IDs not found
+        fetchNews(sym, true);
       }
     }
   } catch(err) {
@@ -3011,13 +3022,7 @@ async function fetchDataOnly(sym) {
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
     storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar(); renderAnalysis(record);
-  } catch(err) {
-    renderError(sym,err.message);
-    const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
-  }
-}
-
-// Background data fetch — stores without changing the screen
+    if (activeStock === sym) fetchNews(sym, true);
 async function _fetchDataBackground(sym) {
   const existing = getStoredData()[sym];
   if (existing?.price?.current) return; // already has price data
@@ -3619,6 +3624,88 @@ function renderAIScorecard(record) {
     </div>`;
 }
 
+// ── NEWS CARD RENDERERS ────────────────────────────────────────────────────────
+function renderNewsCard(news) {
+  if (!news?.length) return '';
+  const sentIcons = { positive: '📈', negative: '📉', neutral: '📄' };
+  return `
+    <div class="card" style="margin-top:0">
+      <div class="section-title">📰 Latest News</div>
+      ${news.map(n => `
+        <div class="news-item">
+          <div class="news-dot ${n.sentiment}" style="margin-top:4px"></div>
+          <div style="flex:1;min-width:0">
+            ${n.url
+              ? `<a class="news-title" href="${n.url}" target="_blank" rel="noopener noreferrer" style="color:var(--text);text-decoration:none;display:block">${n.title}</a>`
+              : `<div class="news-title">${n.title}</div>`
+            }
+            <div class="news-meta-row">
+              ${n.source ? `<span class="news-source">${n.source}</span>` : ''}
+              <span class="news-date">${n.date}</span>
+            </div>
+          </div>
+          <span class="news-sentiment-tag ${n.sentiment}">${sentIcons[n.sentiment] || ''} ${n.sentiment}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderNewsSkeleton() {
+  return `
+    <div class="card" style="margin-top:0">
+      <div class="section-title">📰 Latest News</div>
+      ${[85, 70, 90].map(w => `
+        <div class="news-item">
+          <div class="news-dot neutral" style="opacity:.3;margin-top:4px"></div>
+          <div style="flex:1">
+            <div class="news-skeleton-line" style="width:${w}%"></div>
+            <div class="news-skeleton-line short"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── FETCH NEWS (separate call, auto after analysis) ────────────────────────────
+async function fetchNews(sym, force = false) {
+  const wrap = document.getElementById('news-section-wrap');
+  if (!wrap || activeStock !== sym) return;
+
+  const k    = KNOWN_STOCKS.find(x => x.symbol === sym);
+  const name = k?.name || sym;
+
+  // Serve from cache if fresh and not forced
+  if (!force) {
+    const stored = getStoredData()[sym];
+    if (stored?.news?.length && stored?.newsAt) {
+      const ageMs = Date.now() - new Date(stored.newsAt).getTime();
+      if (ageMs < 30 * 60 * 1000) {            // 30-minute freshness window
+        wrap.innerHTML = renderNewsCard(stored.news);
+        return;
+      }
+    }
+  }
+
+  wrap.innerHTML = renderNewsSkeleton();
+
+  try {
+    const res  = await fetch(`${API_BASE}/news?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    // Persist in stored record for next visit
+    const rec = getStoredData()[sym];
+    if (rec) {
+      rec.news   = data.news || [];
+      rec.newsAt = new Date().toISOString();
+      storeAnalysis(sym, rec);
+    }
+
+    if (activeStock !== sym) return;
+    wrap.innerHTML = data.news?.length ? renderNewsCard(data.news) : '';
+  } catch (_) {
+    if (activeStock === sym) wrap.innerHTML = '';
+  }
+}
+
 // ── FULL ANALYSIS RENDER ───────────────────────────────────────────────────────
 function renderAnalysis(d) {
   currentRecord = d; currentTF = 'M3';
@@ -3698,6 +3785,9 @@ function renderAnalysis(d) {
       <div class="deep-dive-v2" id="ai-deepdive-wrap">
         ${renderDeepDive(d)}
       </div>
+
+      <!-- ── ROW 4: LATEST NEWS ── -->
+      <div id="news-section-wrap"></div>
 
       <!-- ── CHAT CARD ── -->
       <div class="chat-section-v2">
