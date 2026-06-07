@@ -3023,6 +3023,13 @@ async function fetchDataOnly(sym) {
     };
     storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar(); renderAnalysis(record);
     if (activeStock === sym) fetchNews(sym, true);
+  } catch(err) {
+    renderError(sym,err.message);
+    const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
+  }
+}
+
+// Background data fetch — stores without changing the screen
 async function _fetchDataBackground(sym) {
   const existing = getStoredData()[sym];
   if (existing?.price?.current) return; // already has price data
