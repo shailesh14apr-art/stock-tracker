@@ -3638,7 +3638,7 @@ function renderAIScorecard(record) {
 
 // ── NEWS CARD RENDERERS ────────────────────────────────────────────────────────
 function renderNewsCard(news) {
-  if (!news?.length) return '';
+  if (!news?.length) return renderNewsEmpty();
   const sentIcons = { positive: '📈', negative: '📉', neutral: '📄' };
   return `
     <div class="card" style="margin-top:0">
@@ -3658,6 +3658,14 @@ function renderNewsCard(news) {
           </div>
           <span class="news-sentiment-tag ${n.sentiment}">${sentIcons[n.sentiment] || ''} ${n.sentiment}</span>
         </div>`).join('')}
+    </div>`;
+}
+
+function renderNewsEmpty() {
+  return `
+    <div class="card" style="margin-top:0">
+      <div class="section-title">📰 Latest News</div>
+      <div style="font-size:12px;color:var(--text3);padding:6px 0">No recent news found for this stock.</div>
     </div>`;
 }
 
@@ -3712,9 +3720,9 @@ async function fetchNews(sym, force = false) {
     }
 
     if (activeStock !== sym) return;
-    wrap.innerHTML = data.news?.length ? renderNewsCard(data.news) : '';
+    wrap.innerHTML = renderNewsCard(data.news || []);
   } catch (_) {
-    if (activeStock === sym) wrap.innerHTML = '';
+    if (activeStock === sym) wrap.innerHTML = renderNewsEmpty();
   }
 }
 
