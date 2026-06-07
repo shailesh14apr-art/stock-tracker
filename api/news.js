@@ -1,24 +1,61 @@
 export const config = { runtime: 'edge' };
 
-const YF_HEADERS = {
+const FEED_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Referer': 'https://finance.yahoo.com/',
-  'Origin': 'https://finance.yahoo.com',
+  'Accept': 'application/rss+xml, application/xml, text/xml, */*',
 };
 
-async function fetchYF(path, timeout = 7000) {
-  for (const host of ['query1', 'query2']) {
-    try {
-      const res = await fetch(`https://${host}.finance.yahoo.com${path}`, {
-        headers: YF_HEADERS,
-        signal: AbortSignal.timeout(timeout),
-      });
-      if (res.ok) return res;
-    } catch (_) {}
+// Google News RSS has solid coverage of Indian listed companies and needs no auth —
+// far more reliable for NSE small/mid-caps than Yahoo Finance's news search index.
+async function fetchGoogleNews(query, timeout = 7000) {
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
+    const res = await fetch(url, { headers: FEED_HEADERS, signal: AbortSignal.timeout(timeout) });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    return parseRssItems(xml);
+  } catch (_) {
+    return [];
   }
-  return null;
+}
+
+function decodeEntities(s) {
+  return s
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+
+function parseRssItems(xml) {
+  const items = [];
+  const itemRe = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = itemRe.exec(xml)) !== null) {
+    const block = m[1];
+    const get = (tag) => {
+      const r = new RegExp(`<${tag}>(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([\\s\\S]*?))<\\/${tag}>`).exec(block);
+      if (!r) return '';
+      return decodeEntities((r[1] ?? r[2] ?? '').trim());
+    };
+    let title  = get('title');
+    const link = get('link');
+    const pubDate = get('pubDate');
+    const sourceTag = /<source[^>]*>(?:<!\[CDATA\[([\s\S]*?)\]\]>|([\s\S]*?))<\/source>/.exec(block);
+    let source = sourceTag ? decodeEntities((sourceTag[1] ?? sourceTag[2] ?? '').trim()) : '';
+
+    // Google News titles are formatted as "Headline - Publisher"; strip that
+    // suffix whether or not a separate <source> tag was present.
+    const dash = title.lastIndexOf(' - ');
+    if (dash > 0) {
+      const suffix = title.slice(dash + 3).trim();
+      if (!source || suffix.toLowerCase() === source.toLowerCase()) {
+        if (!source) source = suffix;
+        title = title.slice(0, dash).trim();
+      }
+    }
+
+    if (title && link) items.push({ title, link, source, pubDate });
+  }
+  return items;
 }
 
 export default async function handler(req) {
@@ -39,22 +76,15 @@ export default async function handler(req) {
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set' }, 500, cors);
 
   try {
-    // ── 1. Fetch news from Yahoo Finance search API ───────────────────────────
-    // Yahoo's search/news index has patchy coverage of Indian small/mid-caps —
-    // a single query (ticker or name) often returns nothing, or falls back to
-    // unrelated trending news. Try a few query variants and merge the results.
-    const queries = [name, `${symbol}.NS`, symbol];
+    // ── 1. Fetch news from Google News RSS — try a couple of query variants ───
+    const queries = [`${name} share price`, `${name} NSE ${symbol}`];
     const seen = new Map();
     for (const q of queries) {
-      const newsRes = await fetchYF(
-        `/v1/finance/search?q=${encodeURIComponent(q)}&newsCount=10&quotesCount=0&enableFuzzyQuery=false&enableNavLinks=false`,
-        7000
-      );
-      if (!newsRes) continue;
-      const newsData = await newsRes.json();
-      for (const n of (newsData?.news || [])) {
-        if (n?.link && !seen.has(n.link)) seen.set(n.link, n);
+      const items = await fetchGoogleNews(q);
+      for (const it of items) {
+        if (!seen.has(it.link)) seen.set(it.link, it);
       }
+      if (seen.size >= 10) break;
     }
 
     const rawNews = [...seen.values()];
@@ -75,18 +105,21 @@ export default async function handler(req) {
     };
 
     const articles = rawNews
-      .map(n => ({
-        title:  n.title  || '',
-        url:    n.link   || '',
-        source: n.publisher || '',
-        date:   n.providerPublishTime
-          ? new Date(n.providerPublishTime * 1000).toLocaleDateString('en-IN', {
-              day: 'numeric', month: 'short', year: '2-digit',
-              hour: '2-digit', minute: '2-digit',
-            })
-          : '',
-        publishedAt: n.providerPublishTime || 0,
-      }))
+      .map(n => {
+        const ts = n.pubDate ? new Date(n.pubDate).getTime() : 0;
+        return {
+          title: n.title,
+          url: n.link,
+          source: n.source,
+          date: ts
+            ? new Date(ts).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: '2-digit',
+                hour: '2-digit', minute: '2-digit',
+              })
+            : '',
+          publishedAt: ts,
+        };
+      })
       .filter(n => n.title.length > 0 && isRelevant(n.title))
       .sort((a, b) => b.publishedAt - a.publishedAt);
 
