@@ -296,7 +296,7 @@ knownFundamentals: dividendYield=decimal (0.008=0.8%); roe/roce/margins/growth=p
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 900,
+        max_tokens: 1400,
         messages: [{ role: 'user', content: prompt }]
       }),
       signal: AbortSignal.timeout(15000)
