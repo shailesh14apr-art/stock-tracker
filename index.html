@@ -806,6 +806,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 /* ── AI DEEP DIVE (COLLAPSIBLE) ─────────────────────────────────────── */
 .deep-dive-v2 { padding: 0 28px 24px; }
+.news-section-v2 { padding: 0 28px 24px; }
 .dd-toggle {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   padding: 11px 16px; background: var(--surface); border: 1px solid var(--border);
@@ -1264,6 +1265,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   }
 
   .deep-dive-v2{
+    padding:0 12px 18px;
+  }
+
+  .news-section-v2{
     padding:0 12px 18px;
   }
   .dd-inner{
@@ -3794,7 +3799,7 @@ function renderAnalysis(d) {
       </div>
 
       <!-- ── ROW 4: LATEST NEWS ── -->
-      <div id="news-section-wrap"></div>
+      <div class="news-section-v2" id="news-section-wrap"></div>
 
       <!-- ── CHAT CARD ── -->
       <div class="chat-section-v2">

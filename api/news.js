@@ -40,10 +40,11 @@ export default async function handler(req) {
 
   try {
     // ── 1. Fetch news from Yahoo Finance search API ───────────────────────────
-    const yahooSym = symbol.toUpperCase() + '.NS';
-
+    // Searching by the raw NSE ticker (e.g. "TITAGARH.NS") often isn't recognised
+    // by Yahoo's search index for Indian small/mid-caps and falls back to generic
+    // trending news. Searching by company name returns far more relevant matches.
     const newsRes = await fetchYF(
-      `/v1/finance/search?q=${encodeURIComponent(yahooSym)}&newsCount=8&quotesCount=0&enableFuzzyQuery=false&enableNavLinks=false`,
+      `/v1/finance/search?q=${encodeURIComponent(name)}&newsCount=12&quotesCount=0&enableFuzzyQuery=false&enableNavLinks=false`,
       7000
     );
 
@@ -54,9 +55,22 @@ export default async function handler(req) {
 
     if (!rawNews.length) return reply({ news: [] }, 200, cors);
 
-    // ── 2. Clean and format articles ─────────────────────────────────────────
+    // ── 2. Clean, format and filter to articles that actually mention the company ──
+    const nameTokens = name
+      .toLowerCase()
+      .replace(/\b(ltd|limited|inc|corp|company|co|plc)\b/g, '')
+      .split(/\s+/)
+      .filter(t => t.length > 2);
+    const symbolLower = symbol.toLowerCase();
+
+    const isRelevant = (title) => {
+      const t = title.toLowerCase();
+      if (t.includes(symbolLower)) return true;
+      return nameTokens.some(tok => t.includes(tok));
+    };
+
     const articles = rawNews
-      .slice(0, 8)
+      .slice(0, 12)
       .map(n => ({
         title:  n.title  || '',
         url:    n.link   || '',
@@ -68,7 +82,7 @@ export default async function handler(req) {
             })
           : '',
       }))
-      .filter(n => n.title.length > 0);
+      .filter(n => n.title.length > 0 && isRelevant(n.title));
 
     if (!articles.length) return reply({ news: [] }, 200, cors);
 
