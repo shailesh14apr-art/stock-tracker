@@ -3091,10 +3091,18 @@ async function triggerAnalysis(sym) {
   }
   const existingData=getStoredData()[sym]||{};
   const prevForDelta = existingData.aiAnalysis?.signal || existingData.signal ? {
-    signal: existingData.signal,
-    indicators: existingData.aiIndicators || {},
-    lastUpdated: existingData.lastUpdated,
-    aiAnalysis: { confidence: existingData.aiAnalysis?.confidence, keyRisk: existingData.aiAnalysis?.keyRisk },
+    signal: existingData.signal ?? null,
+    indicators: {
+      rsi:       existingData.aiIndicators?.rsi       ?? null,
+      sma50:     existingData.aiIndicators?.sma50     ?? null,
+      price:     existingData.aiIndicators?.price     ?? null,
+      techScore: existingData.aiIndicators?.techScore ?? null,
+    },
+    lastUpdated: existingData.lastUpdated ?? null,
+    aiAnalysis: {
+      confidence: existingData.aiAnalysis?.confidence ?? null,
+      keyRisk:    existingData.aiAnalysis?.keyRisk    ?? null,
+    },
   } : null;
   try {
     const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
