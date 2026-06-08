@@ -832,6 +832,49 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 /* ── AI DEEP DIVE (COLLAPSIBLE) ─────────────────────────────────────── */
 .deep-dive-v2 { padding: 0 28px 24px; }
+
+/* ── DELTA CARD (what changed since last analysis) ───────────────────── */
+.delta-wrap { padding: 0 28px; margin-bottom: 0; }
+.delta-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.delta-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; cursor: pointer; user-select: none;
+  background: var(--surface2);
+}
+.delta-hdr:hover { background: var(--border); }
+.delta-hdr-left {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; color: var(--text2);
+}
+.delta-hdr-date { font-size: 10px; color: var(--text3); font-weight: 500; }
+.delta-chevron { font-size: 10px; color: var(--text3); transition: transform .15s; }
+.delta-card.collapsed .delta-chevron { transform: rotate(-90deg); }
+.delta-card.collapsed .delta-body { display: none; }
+.delta-body { padding: 2px 14px 10px; }
+.delta-row {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.delta-row:last-child { border-bottom: none; }
+.delta-label {
+  width: 90px; flex-shrink: 0;
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .4px;
+}
+.delta-old { color: var(--text3); font-size: 12px; }
+.delta-arrow { color: var(--text3); font-size: 10px; flex-shrink: 0; }
+.delta-new { font-weight: 700; font-size: 12px; }
+.delta-new.up { color: var(--green); }
+.delta-new.down { color: var(--red); }
+.delta-new.same { color: var(--text2); font-weight: 500; }
+.delta-risk-new { font-size: 11.5px; color: var(--text2); line-height: 1.45; flex: 1; min-width: 0; }
+.delta-empty { font-size: 12px; color: var(--text3); text-align: center; padding: 10px 0; }
 .news-section-v2 { padding: 0 28px 24px; }
 .dd-toggle {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -1288,6 +1331,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   .sgcell-label,.sgcell-value,.sgcell-sub{
     min-width:0;
     overflow-wrap:anywhere;
+  }
+
+  .delta-wrap{
+    padding:0 12px;
   }
 
   .deep-dive-v2{
@@ -3043,6 +3090,12 @@ async function triggerAnalysis(sym) {
     if(dd2) dd2.innerHTML='';
   }
   const existingData=getStoredData()[sym]||{};
+  const prevForDelta = existingData.aiAnalysis?.signal || existingData.signal ? {
+    signal: existingData.signal,
+    indicators: existingData.aiIndicators || {},
+    lastUpdated: existingData.lastUpdated,
+    aiAnalysis: { confidence: existingData.aiAnalysis?.confidence, keyRisk: existingData.aiAnalysis?.keyRisk },
+  } : null;
   try {
     const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
     const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}`;
@@ -3063,6 +3116,7 @@ async function triggerAnalysis(sym) {
       ema50Series:result.ema50Series||existingData?.ema50Series||[],
       ema200Series:result.ema200Series||existingData?.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
+      previousAnalysis: prevForDelta,
     };
     storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar();
     if (activeStock === sym) {
@@ -3075,6 +3129,8 @@ async function triggerAnalysis(sym) {
         const pill = document.getElementById('ai-signal-pill-wrap');
         const pilotLabel = { BUY: '↑ Buy', HOLD: '→ Hold', REVIEW: '↓ Review' }[record.signal] || record.signal;
         if (pill) pill.innerHTML = `<span class="ai-pill ${record.signal}">${pilotLabel}</span>`;
+        const dw = document.getElementById('delta-card-wrap');
+        if (dw) dw.innerHTML = renderDeltaCard(record);
         fetchNews(sym, true);
       } else {
         renderAnalysis(record); // fallback if IDs not found
@@ -3820,6 +3876,103 @@ async function fetchNews(sym, force = false) {
 }
 
 // ── FULL ANALYSIS RENDER ───────────────────────────────────────────────────────
+function toggleDeltaCard() {
+  const c = document.getElementById('delta-card');
+  if (c) c.classList.toggle('collapsed');
+}
+
+function renderDeltaCard(d) {
+  const prev = d.previousAnalysis;
+  if (!prev) return '';
+
+  const prevDate = prev.lastUpdated ? fmtDate(prev.lastUpdated) : '—';
+  const rows = [];
+
+  // Signal
+  const sigRank = { BUY: 2, HOLD: 1, REVIEW: 0 };
+  const sigLabel = { BUY: '↑ BUY', HOLD: '→ HOLD', REVIEW: '↓ REVIEW' };
+  const oldSig = prev.signal, newSig = d.signal;
+  if (oldSig && newSig && oldSig !== newSig) {
+    const cls = (sigRank[newSig] ?? 1) > (sigRank[oldSig] ?? 1) ? 'up' : 'down';
+    rows.push(`<div class="delta-row">
+      <div class="delta-label">Signal</div>
+      <div class="delta-old">${sigLabel[oldSig] || oldSig}</div>
+      <div class="delta-arrow">→</div>
+      <div class="delta-new ${cls}">${sigLabel[newSig] || newSig}</div>
+    </div>`);
+  }
+
+  // RSI
+  const oldRsi = prev.indicators?.rsi, newRsi = d.aiIndicators?.rsi;
+  if (oldRsi != null && newRsi != null && Math.abs(oldRsi - newRsi) >= 1) {
+    const inRange = v => v >= 30 && v <= 60;
+    const cls = inRange(newRsi) && !inRange(oldRsi) ? 'up'
+              : !inRange(newRsi) && inRange(oldRsi) ? 'down'
+              : newRsi > oldRsi ? 'up' : 'down';
+    rows.push(`<div class="delta-row">
+      <div class="delta-label">RSI</div>
+      <div class="delta-old">${oldRsi.toFixed(1)}</div>
+      <div class="delta-arrow">→</div>
+      <div class="delta-new ${cls}">${newRsi.toFixed(1)}</div>
+    </div>`);
+  }
+
+  // Price vs SMA50
+  const oldPx = prev.indicators?.price, oldSma = prev.indicators?.sma50;
+  const newPx = d.price?.current, newSma = d.aiIndicators?.sma50;
+  if (oldPx != null && oldSma != null && newPx != null && newSma != null) {
+    const wasAbove = oldPx > oldSma, isAbove = newPx > newSma;
+    if (wasAbove !== isAbove) {
+      rows.push(`<div class="delta-row">
+        <div class="delta-label">vs SMA 50</div>
+        <div class="delta-old">${wasAbove ? 'Above' : 'Below'}</div>
+        <div class="delta-arrow">→</div>
+        <div class="delta-new ${isAbove ? 'up' : 'down'}">${isAbove ? 'Above' : 'Below'}</div>
+      </div>`);
+    }
+  }
+
+  // Tech Score
+  const oldScore = prev.indicators?.techScore, newScore = d.aiIndicators?.techScore;
+  if (oldScore != null && newScore != null && oldScore !== newScore) {
+    rows.push(`<div class="delta-row">
+      <div class="delta-label">Tech Score</div>
+      <div class="delta-old">${oldScore}/10</div>
+      <div class="delta-arrow">→</div>
+      <div class="delta-new ${newScore > oldScore ? 'up' : 'down'}">${newScore}/10</div>
+    </div>`);
+  }
+
+  // Key Risk
+  const oldRisk = prev.aiAnalysis?.keyRisk, newRisk = d.aiAnalysis?.keyRisk;
+  if (newRisk) {
+    const unchanged = oldRisk && oldRisk.trim().toLowerCase() === newRisk.trim().toLowerCase();
+    const snippet = t => t.length > 90 ? t.slice(0, 90) + '…' : t;
+    rows.push(`<div class="delta-row" style="align-items:flex-start">
+      <div class="delta-label">Key Risk</div>
+      ${unchanged
+        ? `<div class="delta-old">Unchanged</div><div class="delta-arrow"></div><div class="delta-risk-new">${snippet(newRisk)}</div>`
+        : `<div class="delta-risk-new">${snippet(newRisk)}</div>`}
+    </div>`);
+  }
+
+  const collapsed = window.innerWidth <= 768 ? ' collapsed' : '';
+  const body = rows.length
+    ? rows.join('')
+    : `<div class="delta-empty">No significant changes since last analysis</div>`;
+
+  return `<div class="delta-wrap"><div class="delta-card${collapsed}" id="delta-card">
+    <div class="delta-hdr" onclick="toggleDeltaCard()">
+      <div class="delta-hdr-left">
+        <span style="font-size:13px">📊</span>
+        <span>What changed since <span class="delta-hdr-date">${prevDate}</span></span>
+      </div>
+      <span class="delta-chevron">▾</span>
+    </div>
+    <div class="delta-body">${body}</div>
+  </div></div>`;
+}
+
 function renderAnalysis(d) {
   currentRecord = d; currentTF = 'M3';
   const cfg  = INDUSTRY_CONFIG[d.sector] || { label: 'Equity', color: 'var(--accent)' };
@@ -3888,6 +4041,9 @@ function renderAnalysis(d) {
         <div id="ai-scorecard-wrap">${renderAIScorecard(d)}</div>
 
       </div><!-- /main-row-v2 -->
+
+      <!-- ── DELTA CARD ── -->
+      <div id="delta-card-wrap">${renderDeltaCard(d)}</div>
 
       <!-- ── ROW 2: KEY METRICS (tabbed) ── -->
       <div class="metrics-v2">
