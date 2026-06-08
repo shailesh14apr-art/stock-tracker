@@ -98,6 +98,32 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .signout-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red-border);}
 .last-updated-bar{padding:6px 12px;font-size:10px;color:var(--text3);text-align:center;border-top:1px solid var(--border);}
 
+/* ── TODAY'S BRIEF CARD ───────────────────────────────────────────────── */
+.brief-card{background:var(--surface);border:1px solid var(--border2);border-radius:8px;margin:0 4px 12px;overflow:hidden;}
+.brief-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none;}
+.brief-header:hover{background:var(--surface2);}
+.brief-title{font-size:12px;font-weight:700;color:var(--text);}
+.brief-date{font-size:10px;color:var(--text3);font-weight:500;margin-top:1px;}
+.brief-chevron{font-size:10px;color:var(--text3);transition:transform .15s;}
+.brief-card.collapsed .brief-chevron{transform:rotate(-90deg);}
+.brief-card.collapsed .brief-content{display:none;}
+.brief-content{padding:0 12px 12px;}
+.brief-summary{font-size:11px;color:var(--text3);margin-bottom:8px;}
+.brief-pills{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.brief-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.brief-pill.buy{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.brief-pill.hold{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+.brief-pill.review{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.brief-movers-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.brief-movers{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;}
+.brief-mover{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:7px 6px;text-align:center;}
+.brief-mover-sym{font-size:10px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.brief-mover-chg{font-size:11px;font-weight:700;margin-top:2px;}
+.brief-mover-chg.pos{color:var(--green);}
+.brief-mover-chg.neg{color:var(--red);}
+.brief-ai-btn{width:100%;padding:8px;background:var(--surface2);color:var(--accent);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.brief-ai-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+
 /* ── MAIN ─────────────────────────────────────────────────────────────── */
 #main{flex:1;min-width:0;max-width:100%;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
 #main::-webkit-scrollbar{width:5px;}
@@ -1763,7 +1789,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </div>
     </div>
   </div>
-  <div class="sidebar-body"><div class="sidebar-label">Your Watchlist</div><div id="watchlist-container"></div></div>
+  <div class="sidebar-body"><div id="todays-brief-wrap"></div><div class="sidebar-label">Your Watchlist</div><div id="watchlist-container"></div></div>
   <div class="sidebar-footer">
     <button class="add-btn" onclick="openModal()">+ Add Stock</button>
     <button class="signout-btn" onclick="handleSignOut()">⎋ Sign Out</button>
@@ -2821,7 +2847,73 @@ function selectStockMobile(sym) {
 }
 
 // ── SIDEBAR ────────────────────────────────────────────────────────────────────
+function renderTodaysBrief() {
+  const wrap = document.getElementById('todays-brief-wrap');
+  if (!wrap) return;
+
+  const wl = getWatchlist(), stored = getStoredData();
+  const records = wl.map(sym => stored[sym]).filter(Boolean);
+  const analysedCount = records.filter(d => d.signal && d.signal !== 'PENDING').length;
+
+  const counts = { BUY: 0, HOLD: 0, REVIEW: 0 };
+  records.forEach(d => { if (counts[d.signal] !== undefined) counts[d.signal]++; });
+
+  const movers = records
+    .filter(d => d.price?.changePercent != null)
+    .sort((a, b) => Math.abs(b.price.changePercent) - Math.abs(a.price.changePercent))
+    .slice(0, 3);
+
+  const collapsed = localStorage.getItem('briefCardCollapsed') === '1';
+  const dateStr = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+
+  wrap.innerHTML = `
+    <div class="brief-card${collapsed ? ' collapsed' : ''}" id="brief-card">
+      <div class="brief-header" onclick="toggleTodaysBrief()">
+        <div>
+          <div class="brief-title">📋 Today's brief</div>
+          <div class="brief-date">${dateStr}</div>
+        </div>
+        <span class="brief-chevron">▼</span>
+      </div>
+      <div class="brief-content">
+        <div class="brief-summary">${analysedCount} of ${wl.length} stock${wl.length === 1 ? '' : 's'} analysed</div>
+        <div class="brief-pills">
+          <span class="brief-pill buy">${counts.BUY} Buy</span>
+          <span class="brief-pill hold">${counts.HOLD} Hold</span>
+          <span class="brief-pill review">${counts.REVIEW} Review</span>
+        </div>
+        ${movers.length ? `
+        <div class="brief-movers-label">Top movers</div>
+        <div class="brief-movers">
+          ${movers.map(m => {
+            const chg = m.price.changePercent;
+            return `<div class="brief-mover">
+              <div class="brief-mover-sym">${m.symbol}</div>
+              <div class="brief-mover-chg ${chg >= 0 ? 'pos' : 'neg'}">${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}%</div>
+            </div>`;
+          }).join('')}
+        </div>` : ''}
+        <button class="brief-ai-btn" onclick="getAIBrief()">🤖 Get AI brief</button>
+      </div>
+    </div>`;
+}
+
+function toggleTodaysBrief() {
+  const card = document.getElementById('brief-card');
+  if (!card) return;
+  const collapsed = card.classList.toggle('collapsed');
+  localStorage.setItem('briefCardCollapsed', collapsed ? '1' : '0');
+}
+
+function getAIBrief() {
+  showPortfolioChat();
+  const input = document.getElementById('pc-input');
+  if (input) input.value = "Give me a concise morning brief: which stocks moved most today, any signal changes since last analysis, and the 1-2 highest-priority actions I should consider.";
+  sendPortfolioMessage();
+}
+
 function renderSidebar() {
+  renderTodaysBrief();
   const wl=getWatchlist(), stored=getStoredData();
   let latest=null;
   Object.values(stored).forEach(d=>{if(d?.lastUpdated&&(!latest||d.lastUpdated>latest))latest=d.lastUpdated;});
