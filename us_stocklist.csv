@@ -1,0 +1,518 @@
+Company Name,Industry,Symbol
+3M,industrials,MMM
+A. O. Smith,industrials,AOS
+Abbott Laboratories,healthcare,ABT
+AbbVie,healthcare,ABBV
+Accenture,it,ACN
+Adobe Inc.,it,ADBE
+Advanced Micro Devices,it,AMD
+AES Corporation,utilities,AES
+Aflac,financials,AFL
+Agilent Technologies,healthcare,A
+Air Products,materials,APD
+Airbnb,consumer_disc,ABNB
+Akamai Technologies,it,AKAM
+Albemarle Corporation,materials,ALB
+Alexandria Real Estate Equities,real_estate,ARE
+Align Technology,healthcare,ALGN
+Allegion,industrials,ALLE
+Alliant Energy,utilities,LNT
+Allstate,financials,ALL
+Alnylam Pharmaceuticals,healthcare,ALNY
+Alphabet Inc. (Class A),communication,GOOGL
+Alphabet Inc. (Class C),communication,GOOG
+Altria,consumer_staples,MO
+Amazon,consumer_disc,AMZN
+Amcor,materials,AMCR
+Ameren,utilities,AEE
+American Electric Power,utilities,AEP
+American Express,financials,AXP
+American International Group,financials,AIG
+American Tower,real_estate,AMT
+American Water Works,utilities,AWK
+Ameriprise Financial,financials,AMP
+Ametek,industrials,AME
+Amgen,healthcare,AMGN
+Amphenol,it,APH
+Analog Devices,it,ADI
+Aon plc,financials,AON
+APA Corporation,energy,APA
+Apollo Global Management,financials,APO
+Apple Inc.,it,AAPL
+Applied Materials,it,AMAT
+AppLovin,it,APP
+Aptiv,consumer_disc,APTV
+Arch Capital Group,financials,ACGL
+Archer Daniels Midland,consumer_staples,ADM
+Ares Management,financials,ARES
+Arista Networks,it,ANET
+Arm Holdings,it,ARM
+Arthur J. Gallagher & Co.,financials,AJG
+ASML Holding,it,ASML
+Assurant,financials,AIZ
+AT&T,communication,T
+Atlassian,it,TEAM
+Atmos Energy,utilities,ATO
+Autodesk,it,ADSK
+Automatic Data Processing,industrials,ADP
+AutoZone,consumer_disc,AZO
+AvalonBay Communities,real_estate,AVB
+Avery Dennison,materials,AVY
+Axon Enterprise,industrials,AXON
+Baker Hughes,energy,BKR
+Ball Corporation,materials,BALL
+Bank of America,financials,BAC
+Baxter International,healthcare,BAX
+Becton Dickinson,healthcare,BDX
+Berkshire Hathaway,financials,BRK-B
+Best Buy,consumer_disc,BBY
+Bio-Techne,healthcare,TECH
+Biogen,healthcare,BIIB
+BlackRock,financials,BLK
+Blackstone Inc.,financials,BX
+Block Inc,financials,XYZ
+BNY Mellon,financials,BNY
+Boeing,industrials,BA
+Booking Holdings,consumer_disc,BKNG
+Boston Scientific,healthcare,BSX
+Bristol Myers Squibb,healthcare,BMY
+Broadcom,it,AVGO
+Broadridge Financial Solutions,industrials,BR
+Brown & Brown,financials,BRO
+Brown–Forman,consumer_staples,BF-B
+Builders FirstSource,industrials,BLDR
+Bunge Global,consumer_staples,BG
+BXP Inc,real_estate,BXP
+C.H. Robinson,industrials,CHRW
+Cadence Design Systems,it,CDNS
+Camden Property Trust,real_estate,CPT
+Campbell's Company (The),consumer_staples,CPB
+Capital One,financials,COF
+Cardinal Health,healthcare,CAH
+Carnival Corporation,consumer_disc,CCL
+Carrier Global,industrials,CARR
+Carvana,consumer_disc,CVNA
+Casey's,consumer_staples,CASY
+Caterpillar Inc.,industrials,CAT
+Cboe Global Markets,financials,CBOE
+CBRE Group,real_estate,CBRE
+CDW Corporation,it,CDW
+Cencora,healthcare,COR
+Centene Corporation,healthcare,CNC
+CenterPoint Energy,utilities,CNP
+CF Industries,materials,CF
+Charles River Laboratories,healthcare,CRL
+Charles Schwab Corporation,financials,SCHW
+Charter Communications,communication,CHTR
+Chevron Corporation,energy,CVX
+Chipotle Mexican Grill,consumer_disc,CMG
+Chubb Limited,financials,CB
+Church & Dwight,consumer_staples,CHD
+Ciena,it,CIEN
+Cigna,healthcare,CI
+Cincinnati Financial,financials,CINF
+Cintas,industrials,CTAS
+Cisco,it,CSCO
+Citigroup,financials,C
+Citizens Financial Group,financials,CFG
+Clorox,consumer_staples,CLX
+CME Group,financials,CME
+CMS Energy,utilities,CMS
+Coca-Cola Company (The),consumer_staples,KO
+Coca-Cola Europacific Partners,consumer_staples,CCEP
+Cognizant,it,CTSH
+Coherent Corp.,it,COHR
+Coinbase,financials,COIN
+Colgate-Palmolive,consumer_staples,CL
+Comcast,communication,CMCSA
+Comfort Systems USA,industrials,FIX
+Conagra Brands,consumer_staples,CAG
+ConocoPhillips,energy,COP
+Consolidated Edison,utilities,ED
+Constellation Brands,consumer_staples,STZ
+Constellation Energy,utilities,CEG
+Cooper Companies (The),healthcare,COO
+Copart,industrials,CPRT
+Corning Inc.,it,GLW
+Corpay,financials,CPAY
+Corteva,materials,CTVA
+CoStar Group,real_estate,CSGP
+Costco,consumer_staples,COST
+CRH plc,materials,CRH
+CrowdStrike,it,CRWD
+Crown Castle,real_estate,CCI
+CSX Corporation,industrials,CSX
+Cummins,industrials,CMI
+CVS Health,healthcare,CVS
+D. R. Horton,consumer_disc,DHI
+Danaher Corporation,healthcare,DHR
+Darden Restaurants,consumer_disc,DRI
+Datadog,it,DDOG
+DaVita,healthcare,DVA
+Deckers Brands,consumer_disc,DECK
+Deere & Company,industrials,DE
+Dell Technologies,it,DELL
+Delta Air Lines,industrials,DAL
+Devon Energy,energy,DVN
+Dexcom,healthcare,DXCM
+Diamondback Energy,energy,FANG
+Digital Realty,real_estate,DLR
+Dollar General,consumer_staples,DG
+Dollar Tree,consumer_staples,DLTR
+Dominion Energy,utilities,D
+Domino's,consumer_disc,DPZ
+DoorDash,consumer_disc,DASH
+Dover Corporation,industrials,DOV
+Dow Inc.,materials,DOW
+DTE Energy,utilities,DTE
+Duke Energy,utilities,DUK
+DuPont,materials,DD
+Eaton Corporation,industrials,ETN
+eBay Inc.,consumer_disc,EBAY
+EchoStar,communication,SATS
+Ecolab,materials,ECL
+Edison International,utilities,EIX
+Edwards Lifesciences,healthcare,EW
+Electronic Arts,communication,EA
+Elevance Health,healthcare,ELV
+Emcor,industrials,EME
+Emerson Electric,industrials,EMR
+Entergy,utilities,ETR
+EOG Resources,energy,EOG
+EQT Corporation,energy,EQT
+Equifax,industrials,EFX
+Equinix,real_estate,EQIX
+Equity Residential,real_estate,EQR
+Erie Indemnity,financials,ERIE
+Essex Property Trust,real_estate,ESS
+Estée Lauder Companies (The),consumer_staples,EL
+Everest Group,financials,EG
+Evergy,utilities,EVRG
+Eversource Energy,utilities,ES
+Exelon,utilities,EXC
+Expand Energy,energy,EXE
+Expedia Group,consumer_disc,EXPE
+Expeditors International,industrials,EXPD
+Extra Space Storage,real_estate,EXR
+ExxonMobil,energy,XOM
+F5 Inc,it,FFIV
+FactSet,financials,FDS
+Fair Isaac,it,FICO
+Fastenal,industrials,FAST
+Federal Realty Investment Trust,real_estate,FRT
+FedEx,industrials,FDX
+FedEx Freight,industrials,FDXF
+Ferrovial,industrials,FER
+Fidelity National Information Services,financials,FIS
+Fifth Third Bancorp,financials,FITB
+First Solar,it,FSLR
+FirstEnergy,utilities,FE
+Fiserv,financials,FISV
+Ford Motor Company,consumer_disc,F
+Fortinet,it,FTNT
+Fortive,industrials,FTV
+Fox Corporation (Class A),communication,FOXA
+Fox Corporation (Class B),communication,FOX
+Franklin Resources,financials,BEN
+Freeport-McMoRan,materials,FCX
+Garmin,consumer_disc,GRMN
+Gartner,it,IT
+GE Aerospace,industrials,GE
+GE HealthCare,healthcare,GEHC
+GE Vernova,industrials,GEV
+Gen Digital,it,GEN
+Generac,industrials,GNRC
+General Dynamics,industrials,GD
+General Mills,consumer_staples,GIS
+General Motors,consumer_disc,GM
+Genuine Parts Company,consumer_disc,GPC
+Gilead Sciences,healthcare,GILD
+Global Payments,financials,GPN
+Globe Life,financials,GL
+GoDaddy,it,GDDY
+Goldman Sachs,financials,GS
+Halliburton,energy,HAL
+Hartford (The),financials,HIG
+Hasbro,consumer_disc,HAS
+HCA Healthcare,healthcare,HCA
+Healthpeak Properties,real_estate,DOC
+Henry Schein,healthcare,HSIC
+Hershey Company (The),consumer_staples,HSY
+Hewlett Packard Enterprise,it,HPE
+Hilton Worldwide,consumer_disc,HLT
+Home Depot (The),consumer_disc,HD
+Honeywell,industrials,HON
+Hormel Foods,consumer_staples,HRL
+Host Hotels & Resorts,real_estate,HST
+Howmet Aerospace,industrials,HWM
+HP Inc.,it,HPQ
+Hubbell Incorporated,industrials,HUBB
+Humana,healthcare,HUM
+Huntington Bancshares,financials,HBAN
+Huntington Ingalls Industries,industrials,HII
+IBM,it,IBM
+IDEX Corporation,industrials,IEX
+Idexx Laboratories,healthcare,IDXX
+Illinois Tool Works,industrials,ITW
+Incyte,healthcare,INCY
+Ingersoll Rand,industrials,IR
+Insmed Incorporated,healthcare,INSM
+Insulet Corporation,healthcare,PODD
+Intel,it,INTC
+Interactive Brokers,financials,IBKR
+Intercontinental Exchange,financials,ICE
+International Flavors & Fragrances,materials,IFF
+International Paper,materials,IP
+Intuit,it,INTU
+Intuitive Surgical,healthcare,ISRG
+Invesco,financials,IVZ
+Invitation Homes,real_estate,INVH
+IQVIA,healthcare,IQV
+Iron Mountain,real_estate,IRM
+J.B. Hunt,industrials,JBHT
+J.M. Smucker Company (The),consumer_staples,SJM
+Jabil,it,JBL
+Jack Henry & Associates,financials,JKHY
+Jacobs Solutions,industrials,J
+Johnson & Johnson,healthcare,JNJ
+Johnson Controls,industrials,JCI
+JPMorgan Chase,financials,JPM
+Kenvue,consumer_staples,KVUE
+Keurig Dr Pepper,consumer_staples,KDP
+KeyCorp,financials,KEY
+Keysight Technologies,it,KEYS
+Kimberly-Clark,consumer_staples,KMB
+Kimco Realty,real_estate,KIM
+Kinder Morgan,energy,KMI
+KKR & Co.,financials,KKR
+KLA Corporation,it,KLAC
+Kraft Heinz,consumer_staples,KHC
+Kroger,consumer_staples,KR
+L3Harris,industrials,LHX
+Labcorp,healthcare,LH
+Lam Research,it,LRCX
+Las Vegas Sands,consumer_disc,LVS
+Leidos,industrials,LDOS
+Lennar,consumer_disc,LEN
+Lennox International,industrials,LII
+Lilly (Eli),healthcare,LLY
+Linde plc,materials,LIN
+Live Nation Entertainment,communication,LYV
+Lockheed Martin,industrials,LMT
+Loews Corporation,financials,L
+Lowe's,consumer_disc,LOW
+Lululemon Athletica,consumer_disc,LULU
+Lumentum,it,LITE
+LyondellBasell,materials,LYB
+M&T Bank,financials,MTB
+Marathon Petroleum,energy,MPC
+Marriott International,consumer_disc,MAR
+Marsh McLennan,financials,MRSH
+Martin Marietta Materials,materials,MLM
+Marvell Technology,it,MRVL
+Masco,industrials,MAS
+Mastercard,financials,MA
+McCormick & Company,consumer_staples,MKC
+McDonald's,consumer_disc,MCD
+McKesson Corporation,healthcare,MCK
+Medtronic,healthcare,MDT
+Mercado Libre,consumer_disc,MELI
+Merck & Co.,healthcare,MRK
+Meta Platforms,communication,META
+MetLife,financials,MET
+Mettler Toledo,healthcare,MTD
+MGM Resorts,consumer_disc,MGM
+Microchip Technology,it,MCHP
+Micron Technology,it,MU
+Microsoft,it,MSFT
+MicroStrategy,it,MSTR
+Mid-America Apartment Communities,real_estate,MAA
+Moderna,healthcare,MRNA
+Molson Coors Beverage Company,consumer_staples,TAP
+Mondelez International,consumer_staples,MDLZ
+Monolithic Power Systems,it,MPWR
+Monster Beverage,consumer_staples,MNST
+Moody's Corporation,financials,MCO
+Morgan Stanley,financials,MS
+Mosaic Company (The),materials,MOS
+Motorola Solutions,it,MSI
+MSCI Inc.,financials,MSCI
+Nasdaq Inc,financials,NDAQ
+NetApp,it,NTAP
+Netflix,communication,NFLX
+Newmont,materials,NEM
+News Corp (Class A),communication,NWSA
+News Corp (Class B),communication,NWS
+NextEra Energy,utilities,NEE
+Nike Inc,consumer_disc,NKE
+NiSource,utilities,NI
+Nordson Corporation,industrials,NDSN
+Norfolk Southern,industrials,NSC
+Northern Trust,financials,NTRS
+Northrop Grumman,industrials,NOC
+Norwegian Cruise Line Holdings,consumer_disc,NCLH
+NRG Energy,utilities,NRG
+Nucor,materials,NUE
+Nvidia,it,NVDA
+NVR Inc,consumer_disc,NVR
+NXP Semiconductors,it,NXPI
+Occidental Petroleum,energy,OXY
+Old Dominion,industrials,ODFL
+Omnicom Group,communication,OMC
+ON Semiconductor,it,ON
+Oneok,energy,OKE
+Oracle Corporation,it,ORCL
+Otis Worldwide,industrials,OTIS
+O’Reilly Automotive,consumer_disc,ORLY
+Paccar,industrials,PCAR
+Packaging Corporation of America,materials,PKG
+Palantir Technologies,it,PLTR
+Palo Alto Networks,it,PANW
+Paramount Skydance Corporation,communication,PSKY
+Parker Hannifin,industrials,PH
+Paychex,industrials,PAYX
+PayPal,financials,PYPL
+PDD Holdings,it,PDD
+Pentair,industrials,PNR
+PepsiCo,consumer_staples,PEP
+Pfizer,healthcare,PFE
+PG&E Corporation,utilities,PCG
+Philip Morris International,consumer_staples,PM
+Phillips 66,energy,PSX
+Pinnacle West Capital,utilities,PNW
+PNC Financial Services,financials,PNC
+Pool Corporation,consumer_disc,POOL
+PPG Industries,materials,PPG
+PPL Corporation,utilities,PPL
+Principal Financial Group,financials,PFG
+Procter & Gamble,consumer_staples,PG
+Progressive Corporation,financials,PGR
+Prologis,real_estate,PLD
+Prudential Financial,financials,PRU
+PTC Inc.,it,PTC
+Public Service Enterprise Group,utilities,PEG
+Public Storage,real_estate,PSA
+PulteGroup,consumer_disc,PHM
+Qnity Electronics,it,Q
+Qualcomm,it,QCOM
+Quanta Services,industrials,PWR
+Quest Diagnostics,healthcare,DGX
+Ralph Lauren Corporation,consumer_disc,RL
+Raymond James Financial,financials,RJF
+Realty Income,real_estate,O
+Regency Centers,real_estate,REG
+Regeneron Pharmaceuticals,healthcare,REGN
+Regions Financial Corporation,financials,RF
+Republic Services,industrials,RSG
+ResMed,healthcare,RMD
+Revvity,healthcare,RVTY
+Robinhood Markets,financials,HOOD
+Rockwell Automation,industrials,ROK
+Rollins Inc,industrials,ROL
+Roper Technologies,it,ROP
+Ross Stores,consumer_disc,ROST
+Royal Caribbean Group,consumer_disc,RCL
+RTX Corporation,industrials,RTX
+S&P Global,financials,SPGI
+Salesforce,it,CRM
+Sandisk,it,SNDK
+SBA Communications,real_estate,SBAC
+Schlumberger,energy,SLB
+Seagate Technology,it,STX
+Sempra,utilities,SRE
+ServiceNow,it,NOW
+Sherwin-Williams,materials,SHW
+Shopify,it,SHOP
+Simon Property Group,real_estate,SPG
+Skyworks Solutions,it,SWKS
+Smurfit Westrock,materials,SW
+Snap-on,industrials,SNA
+Solventum,healthcare,SOLV
+Southern Company,utilities,SO
+Southwest Airlines,industrials,LUV
+Stanley Black & Decker,industrials,SWK
+Starbucks,consumer_disc,SBUX
+State Street Corporation,financials,STT
+Steel Dynamics,materials,STLD
+Steris,healthcare,STE
+Stryker Corporation,healthcare,SYK
+Supermicro,it,SMCI
+Synchrony Financial,financials,SYF
+Synopsys,it,SNPS
+Sysco,consumer_staples,SYY
+T-Mobile US,communication,TMUS
+T. Rowe Price,financials,TROW
+Take-Two Interactive,communication,TTWO
+Tapestry Inc,consumer_disc,TPR
+Targa Resources,energy,TRGP
+Target Corporation,consumer_staples,TGT
+TE Connectivity,it,TEL
+Teledyne Technologies,it,TDY
+Teradyne,it,TER
+Tesla Inc,consumer_disc,TSLA
+Texas Instruments,it,TXN
+Texas Pacific Land Corporation,energy,TPL
+Textron,industrials,TXT
+Thermo Fisher Scientific,healthcare,TMO
+Thomson Reuters,it,TRI
+TJX Companies,consumer_disc,TJX
+TKO Group Holdings,communication,TKO
+Tractor Supply,consumer_disc,TSCO
+Trade Desk (The),communication,TTD
+Trane Technologies,industrials,TT
+TransDigm Group,industrials,TDG
+Travelers Companies (The),financials,TRV
+Trimble Inc.,it,TRMB
+Truist Financial,financials,TFC
+Tyler Technologies,it,TYL
+Tyson Foods,consumer_staples,TSN
+U.S. Bancorp,financials,USB
+Uber,industrials,UBER
+UDR Inc,real_estate,UDR
+Ulta Beauty,consumer_disc,ULTA
+Union Pacific Corporation,industrials,UNP
+United Airlines Holdings,industrials,UAL
+United Parcel Service,industrials,UPS
+United Rentals,industrials,URI
+UnitedHealth Group,healthcare,UNH
+Universal Health Services,healthcare,UHS
+Valero Energy,energy,VLO
+Veeva Systems,healthcare,VEEV
+Ventas,real_estate,VTR
+Veralto,industrials,VLTO
+Verisign,it,VRSN
+Verisk Analytics,industrials,VRSK
+Verizon,communication,VZ
+Vertex Pharmaceuticals,healthcare,VRTX
+Vertiv,industrials,VRT
+Viatris,healthcare,VTRS
+Vici Properties,real_estate,VICI
+Visa Inc.,financials,V
+Vistra Corp.,utilities,VST
+Vulcan Materials Company,materials,VMC
+W. R. Berkley Corporation,financials,WRB
+W. W. Grainger,industrials,GWW
+Wabtec,industrials,WAB
+Walmart,consumer_staples,WMT
+Walt Disney Company (The),communication,DIS
+Warner Bros. Discovery,communication,WBD
+Waste Management,industrials,WM
+Waters Corporation,healthcare,WAT
+WEC Energy Group,utilities,WEC
+Wells Fargo,financials,WFC
+Welltower,real_estate,WELL
+West Pharmaceutical Services,healthcare,WST
+Western Digital,it,WDC
+Weyerhaeuser,real_estate,WY
+Williams Companies,energy,WMB
+Williams-Sonoma Inc,consumer_disc,WSM
+Willis Towers Watson,financials,WTW
+Workday Inc,it,WDAY
+Wynn Resorts,consumer_disc,WYNN
+Xcel Energy,utilities,XEL
+Xylem Inc.,industrials,XYL
+Yum! Brands,consumer_disc,YUM
+Zebra Technologies,it,ZBRA
+Zimmer Biomet,healthcare,ZBH
+Zoetis,healthcare,ZTS
+Zscaler,it,ZS

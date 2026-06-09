@@ -340,7 +340,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .hub-welcome p{font-size:15px;color:var(--text3);margin-top:6px;}
 .hub-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:auto auto;gap:18px;}
 .hub-card{background:var(--surface);border-radius:18px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);overflow:hidden;transition:box-shadow .2s,transform .2s;}
-.hub-card-featured{grid-row:1/3;grid-column:1;display:flex;flex-direction:column;cursor:pointer;}
+.hub-card-featured{grid-row:1/3;grid-column:1;display:flex;flex-direction:column;}
+.hub-market-split{display:flex;gap:12px;margin-top:auto;}
+.hub-market-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 16px;border-radius:12px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-family:inherit;text-align:left;transition:transform .15s,box-shadow .15s,border-color .15s;}
+.hub-market-btn:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 6px 20px rgba(59,130,246,.18);}
+.hub-market-flag{font-size:22px;}
+.hub-market-name{font-size:14px;font-weight:700;color:var(--text);}
+.hub-market-sub{font-size:10.5px;color:var(--text3);}
+@media(max-width:580px){.hub-market-split{flex-direction:column;}}
 .hub-card-featured:hover{box-shadow:0 8px 32px rgba(37,99,235,.18);transform:translateY(-3px);}
 .hub-featured-hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#3b82f6 100%);padding:32px 28px 28px;position:relative;overflow:hidden;}
 .hub-featured-hero::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 80% 20%,rgba(255,255,255,.07) 0%,transparent 60%);}
@@ -1505,7 +1512,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="lp-feat">
           <div class="lp-feat-icon">⚡</div>
           <div class="lp-feat-title">Personal Watchlist, Synced</div>
-          <div class="lp-feat-desc">Add any Nifty 500 stock to your personal watchlist. Syncs across all your devices via Firebase so your analysis is always with you.</div>
+          <div class="lp-feat-desc">Add any Nifty 500 or US large-cap (S&amp;P 500 / NASDAQ-100) stock to your personal watchlist. Syncs across all your devices via Firebase so your analysis is always with you.</div>
         </div>
       </div>
     </div>
@@ -1520,7 +1527,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <div class="lp-step">
           <div class="lp-step-num">1</div>
           <div class="lp-step-title">Add stocks to your watchlist</div>
-          <div class="lp-step-desc">Search from 500+ Nifty 500 stocks and add the ones you follow. Your watchlist is private and syncs across devices via your Google account.</div>
+          <div class="lp-step-desc">Search from 1,000+ Indian and US stocks and add the ones you follow. Your watchlist is private and syncs across devices via your Google account.</div>
         </div>
         <div class="lp-step">
           <div class="lp-step-num">2</div>
@@ -1657,6 +1664,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span class="hub-index-value">—</span>
         <span class="hub-index-change">—</span>
       </div>
+      <div class="hub-index-divider"></div>
+      <div class="hub-index-item" id="hub-sp500">
+        <span class="hub-index-name">S&amp;P 500</span>
+        <span class="hub-index-value">—</span>
+        <span class="hub-index-change">—</span>
+      </div>
+      <div class="hub-index-divider"></div>
+      <div class="hub-index-item" id="hub-nasdaq">
+        <span class="hub-index-name">NASDAQ</span>
+        <span class="hub-index-value">—</span>
+        <span class="hub-index-change">—</span>
+      </div>
     </div>
     <div class="hub-header-right">
       <div onclick="showAccount('hub')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" title="Account settings">
@@ -1680,29 +1699,52 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <span class="hub-index-value">—</span>
       <span class="hub-index-change">—</span>
     </div>
+    <div class="hub-index-divider"></div>
+    <div class="hub-index-item" id="hub-sp500-mob">
+      <span class="hub-index-name">S&amp;P 500</span>
+      <span class="hub-index-value">—</span>
+      <span class="hub-index-change">—</span>
+    </div>
+    <div class="hub-index-divider"></div>
+    <div class="hub-index-item" id="hub-nasdaq-mob">
+      <span class="hub-index-name">NASDAQ</span>
+      <span class="hub-index-value">—</span>
+      <span class="hub-index-change">—</span>
+    </div>
   </div>
   <div class="hub-body">
     <div class="hub-welcome">
       <h2 style="font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.5px;">Good <span id="hub-time-greet">day</span>, <span id="hub-name">there</span> 👋</h2>
-      <p>Your AI-powered market intelligence suite for Indian equities</p>
+      <p>Your AI-powered market intelligence suite for Indian &amp; global equities</p>
     </div>
     <div class="hub-grid">
-      <div class="hub-card hub-card-featured" onclick="showApp()">
+      <div class="hub-card hub-card-featured">
         <div class="hub-featured-hero">
           <div class="hub-featured-icon">📈</div>
           <div class="hub-live-badge"><span class="hub-live-dot"></span>&nbsp;Live</div>
           <h2>AI Watchlist<br>&amp; Analysis</h2>
-          <p>Live NSE price data · Claude Sonnet AI signals · Candlestick charts with EMA overlays</p>
+          <p>Live NSE &amp; US price data · Claude Sonnet AI signals · Candlestick charts with EMA overlays</p>
         </div>
         <div class="hub-featured-body">
           <div class="hub-pills">
             <span class="hub-pill">🤖 AI Buy / Hold / Review</span>
-            <span class="hub-pill">📊 NSE stocks</span>
+            <span class="hub-pill">📊 Nifty 500 · S&amp;P 500 · NASDAQ-100</span>
             <span class="hub-pill">📈 Candlestick + EMA</span>
             <span class="hub-pill">🛡 Support &amp; Resistance</span>
             <span class="hub-pill">⚡ ~20s analysis</span>
           </div>
-          <button class="hub-open-btn">Open Watchlist <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="hub-market-split">
+            <button class="hub-market-btn" onclick="showApp('in')">
+              <span class="hub-market-flag">🇮🇳</span>
+              <span class="hub-market-name">Indian Markets</span>
+              <span class="hub-market-sub">Nifty 500 · NSE</span>
+            </button>
+            <button class="hub-market-btn hub-market-btn-global" onclick="showApp('global')">
+              <span class="hub-market-flag">🌎</span>
+              <span class="hub-market-name">Global Markets</span>
+              <span class="hub-market-sub">S&amp;P 500 · NASDAQ-100</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="hub-card hub-card-small">
@@ -1733,7 +1775,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <button class="hub-notify-btn" disabled>Notify Me When Live</button>
       </div>
     </div>
-    <p class="hub-footer-note">⚠️ For informational purposes only. Not investment advice. Consult a SEBI-registered advisor before investing.</p>
+    <p class="hub-footer-note">⚠️ For informational purposes only. Not investment advice. Consult a registered financial advisor before investing.</p>
   </div>
 </div>
 
@@ -1819,7 +1861,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPortfolioMessage();}"></textarea>
       <button id="pc-send" onclick="sendPortfolioMessage()" title="Send">↑</button>
     </div>
-    <div class="pc-foot">⚠️ For informational purposes only · Not SEBI-registered investment advice · Powered by Claude Sonnet AI</div>
+    <div class="pc-foot">⚠️ For informational purposes only · Not registered investment advice · Powered by Claude Sonnet AI</div>
   </div>
 
 </div>
@@ -1828,7 +1870,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <aside id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-header-row">
-      <div><h2 style="font-size:16px;font-weight:700;letter-spacing:-.3px;">📈 BazaarLens</h2><p>AI-powered weekly analysis</p></div>
+      <div><h2 style="font-size:16px;font-weight:700;letter-spacing:-.3px;">📈 BazaarLens</h2><p id="sidebar-market-label">AI-powered weekly analysis</p></div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="theme-toggle home-btn" id="home-btn" onclick="showHub()" title="Back to home">🏠</button>
         <button class="theme-toggle account-btn" id="account-btn" onclick="showAccount('app')" title="Account settings">👤</button>
@@ -1997,7 +2039,8 @@ const _db             = firebase.database();
 const _analytics      = firebase.analytics();
 const _googleProvider = new firebase.auth.GoogleAuthProvider();
 _googleProvider.setCustomParameters({ prompt: 'select_account' });
-let _appInited           = false;
+let _appInitedMarket      = null;   // which market the app shell was initialised for
+const _syncedMarkets      = new Set(); // markets whose Firebase data has been pulled this session
 let _currentUser         = null;
 let _loginChartInited    = false;
 let _pendingVerification = false;
@@ -2035,6 +2078,7 @@ _auth.onAuthStateChanged(user => {
     }
     hideLanding();
     Promise.all([syncWatchlistFromFirebase(), syncStockDataFromFirebase()]).then(() => {
+      _syncedMarkets.add(MARKET);
       overlay.classList.add('fade-out');
       setTimeout(() => overlay.classList.add('hidden'), 400);
       const firstName = (user.displayName||'').split(' ')[0] || user.email?.split('@')[0] || 'there';
@@ -2081,13 +2125,24 @@ function _renderIndex(elId, data) {
 
 async function _fetchIndices() {
   try {
-    const res = await fetch('/api/indices');
-    if (!res.ok) throw new Error('fetch failed');
-    const data = await res.json();
-    _renderIndex('hub-nifty', data.nifty);
-    _renderIndex('hub-sensex', data.sensex);
-    _renderIndex('hub-nifty-mob', data.nifty);
-    _renderIndex('hub-sensex-mob', data.sensex);
+    const [resIn, resGl] = await Promise.all([
+      fetch('/api/indices'),
+      fetch('/api/indices?market=global').catch(() => null),
+    ]);
+    if (resIn && resIn.ok) {
+      const data = await resIn.json();
+      _renderIndex('hub-nifty', data.nifty);
+      _renderIndex('hub-sensex', data.sensex);
+      _renderIndex('hub-nifty-mob', data.nifty);
+      _renderIndex('hub-sensex-mob', data.sensex);
+    }
+    if (resGl && resGl.ok) {
+      const g = await resGl.json();
+      _renderIndex('hub-sp500', g.sp500);
+      _renderIndex('hub-nasdaq', g.nasdaq);
+      _renderIndex('hub-sp500-mob', g.sp500);
+      _renderIndex('hub-nasdaq-mob', g.nasdaq);
+    }
   } catch (_) {}
 }
 
@@ -2107,22 +2162,46 @@ function showHub() {
   _startIndicesTicker();
 }
 
-async function showApp() {
-  logEvent('app_opened',{source:'hub'});
+const EMPTY_STATE_HTML = `
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">Select a stock to view analysis</div>
+      <div class="empty-sub">Choose from your watchlist, or click <strong>+ Add Stock</strong> to run a live AI analysis.</div>
+    </div>`;
+
+function _updateMarketLabel() {
+  const el = document.getElementById('sidebar-market-label');
+  if (el) el.textContent = MARKET === 'global' ? '🌎 Global Markets · S&P 500 + NASDAQ-100' : '🇮🇳 Indian Markets · Nifty 500';
+}
+
+async function showApp(market) {
+  if (market && MARKETS[market]) { MARKET = market; localStorage.setItem('marketMode', MARKET); }
+  logEvent('app_opened',{source:'hub',market:MARKET});
   _stopIndicesTicker();
   document.getElementById('hub').style.display = 'none';
-  if (!_appInited) {
-    _appInited = true;
+  if (_appInitedMarket !== MARKET) {
+    const switching = _appInitedMarket !== null;
+    _appInitedMarket = MARKET;
+    activeStock = null; currentRecord = null;
+    _updateMarketLabel();
+    if (switching) document.getElementById('main-content').innerHTML = EMPTY_STATE_HTML;
+    // Pull this market's watchlist + data from Firebase once per session
+    if (_currentUser && !_syncedMarkets.has(MARKET)) {
+      try { await Promise.all([syncWatchlistFromFirebase(), syncStockDataFromFirebase()]); } catch (_) {}
+      _syncedMarkets.add(MARKET);
+    }
     await Promise.all([loadFundamentals(), loadKnownStocks()]);
     renderSidebar();
     const wl = getWatchlist();
     if (wl.length > 0) selectStock(wl[0]);
     // Background-fetch data for ALL watchlist stocks (staggered to avoid hammering API)
+    const _m = MARKET;
     wl.forEach((sym, i) => {
-      setTimeout(() => _fetchDataBackground(sym), i * 4000);
+      setTimeout(() => { if (MARKET === _m) _fetchDataBackground(sym); }, i * 4000);
     });
     // Retry pass at 20s — catches any stocks where initial fetch failed
     setTimeout(() => {
+      if (MARKET !== _m) return;
       getWatchlist().forEach(sym => {
         if (!getStoredData()[sym]?.price?.current) _fetchDataBackground(sym);
       });
@@ -2302,7 +2381,7 @@ function loSwitchToSignin(e) {
   document.querySelector('.lo-signup-row').innerHTML = 'Don\'t have an account?<button onclick="loSwitchToSignup(event)" style="background:none;border:none;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-left:3px;"> Get started →</button>';
 }
 function handleSignOut() {
-  _appInited = false; _currentUser = null;
+  _appInitedMarket = null; _syncedMarkets.clear(); _currentUser = null;
   document.getElementById('hub').style.display = 'none';
   document.getElementById('account').style.display = 'none';
   _auth.signOut();
@@ -2358,6 +2437,29 @@ function changePassword() {
 
 // ── APP CONSTANTS ──────────────────────────────────────────────────────────────
 const API_BASE = '/api';
+
+// ── MARKET MODE (India / Global) ──────────────────────────────────────────────
+const MARKETS = {
+  in:     { label:'Indian Markets',  cur:'₹', locale:'en-IN', csv:'ind_nifty500list.csv', wlKey:'watchlist',        dataKey:'stockData',        fbWl:'watchlists',        fbData:'stockData',        defaultWl:'["TITAGARH"]' },
+  global: { label:'Global Markets',  cur:'$', locale:'en-US', csv:'us_stocklist.csv',     wlKey:'watchlist_global', dataKey:'stockData_global', fbWl:'watchlists_global', fbData:'stockData_global', defaultWl:'["AAPL"]' },
+};
+let MARKET = localStorage.getItem('marketMode') === 'global' ? 'global' : 'in';
+const MKT = () => MARKETS[MARKET];
+const CUR = () => MKT().cur;
+const LOC = () => MKT().locale;
+const mktParam = () => MARKET === 'global' ? '&market=global' : '';
+// fundamentals.json is NSE-specific — never apply it to global stocks
+const fundFor = sym => MARKET === 'global' ? {} : (fundDB[sym] || {});
+function fmtCap(v){
+  if (v == null) return null;
+  if (MARKET === 'global') return v >= 1000 ? '$' + (v/1000).toFixed(2) + 'T' : '$' + v.toFixed(1) + 'B';
+  return v >= 100000 ? (v/100000).toFixed(1)+'L Cr' : v >= 1000 ? (v/1000).toFixed(1)+'K Cr' : v.toFixed(0)+' Cr';
+}
+function fmtVol(v){
+  if (v == null) return '';
+  if (MARKET === 'global') return v >= 1e9 ? (v/1e9).toFixed(2)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K';
+  return v >= 1e7 ? (v/1e7).toFixed(2)+'Cr' : v >= 1e5 ? (v/1e5).toFixed(1)+'L' : (v/1e3).toFixed(0)+'K';
+}
 const INDUSTRY_CONFIG = {
   railways:       { label:'Railways / Capital Goods',  color:'#3b82f6' },
   banking:        { label:'Banking & Finance',         color:'#8b5cf6' },
@@ -2369,12 +2471,21 @@ const INDUSTRY_CONFIG = {
   auto:           { label:'Automobiles',               color:'#84cc16' },
   metals:         { label:'Metals & Mining',           color:'#94a3b8' },
   energy:         { label:'Energy / Oil & Gas',        color:'#eab308' },
+  // Global (GICS) sectors — used by us_stocklist.csv
+  industrials:     { label:'Industrials',            color:'#3b82f6' },
+  healthcare:      { label:'Health Care',            color:'#10b981' },
+  financials:      { label:'Financials',             color:'#8b5cf6' },
+  consumer_disc:   { label:'Consumer Discretionary', color:'#84cc16' },
+  consumer_staples:{ label:'Consumer Staples',       color:'#f59e0b' },
+  communication:   { label:'Communication Services', color:'#ec4899' },
+  materials:       { label:'Materials',              color:'#94a3b8' },
+  utilities:       { label:'Utilities',              color:'#eab308' },
 };
 let KNOWN_STOCKS = [];
 
 async function loadKnownStocks() {
   try {
-    const res = await fetch('ind_nifty500list.csv');
+    const res = await fetch(MKT().csv);
     if (!res.ok) throw new Error('Failed to load stock list: ' + res.status);
     const text = await res.text();
     KNOWN_STOCKS = text.split(/\r?\n/).slice(1).filter(Boolean).map(line => {
@@ -2400,20 +2511,21 @@ async function loadFundamentals() {
 function normalizeSignal(s) { return s === 'BUY_MORE' ? 'BUY' : s; }
 function getStoredData() {
   try {
-    const d = JSON.parse(localStorage.getItem('stockData') || '{}');
+    const d = JSON.parse(localStorage.getItem(MKT().dataKey) || '{}');
     // Migrate legacy BUY_MORE → BUY for any cached records
     Object.values(d).forEach(r => { if (!r) return; if (r.signal) r.signal = normalizeSignal(r.signal); if (r.aiAnalysis?.signal) r.aiAnalysis.signal = normalizeSignal(r.aiAnalysis.signal); });
     return d;
   } catch { return {}; }
 }
-function storeAnalysis(sym,d) {
-  const a=getStoredData();a[sym]=d;localStorage.setItem('stockData',JSON.stringify(a));
+function storeAnalysis(sym,d,m) {
+  if (m && m !== MARKET) return; // stale response from previous market mode
+  const a=getStoredData();a[sym]=d;localStorage.setItem(MKT().dataKey,JSON.stringify(a));
   syncStockDataToFirebase(a);
 }
-function getWatchlist() { try{return JSON.parse(localStorage.getItem('watchlist')||'["TITAGARH"]');}catch{return['TITAGARH'];} }
+function getWatchlist() { try{return JSON.parse(localStorage.getItem(MKT().wlKey)||MKT().defaultWl);}catch{return JSON.parse(MKT().defaultWl);} }
 
 function writeStoredData(d) {
-  localStorage.setItem('stockData', JSON.stringify(d || {}));
+  localStorage.setItem(MKT().dataKey, JSON.stringify(d || {}));
 }
 
 function isNewerRecord(a, b) {
@@ -2433,14 +2545,14 @@ function mergeStoredData(local, remote) {
 
 function syncStockDataToFirebase(data) {
   if (!_currentUser) return;
-  _db.ref(`stockData/${_currentUser.uid}`).set(data || getStoredData())
+  _db.ref(`${MKT().fbData}/${_currentUser.uid}`).set(data || getStoredData())
     .catch(err => console.warn('Could not sync stock data to Firebase:', err));
 }
 
 async function saveWatchlist(l) {
-  localStorage.setItem('watchlist',JSON.stringify(l));
+  localStorage.setItem(MKT().wlKey,JSON.stringify(l));
   if (_currentUser) {
-    try { await _db.ref(`watchlists/${_currentUser.uid}`).set(l); }
+    try { await _db.ref(`${MKT().fbWl}/${_currentUser.uid}`).set(l); }
     catch (err) { console.warn('Could not sync watchlist to Firebase:', err); }
   }
 }
@@ -2448,10 +2560,10 @@ async function saveWatchlist(l) {
 async function syncWatchlistFromFirebase() {
   if (!_currentUser) return;
   try {
-    const snapshot = await _db.ref(`watchlists/${_currentUser.uid}`).once('value');
+    const snapshot = await _db.ref(`${MKT().fbWl}/${_currentUser.uid}`).once('value');
     const fw = snapshot.val();
-    if (fw && Array.isArray(fw)) { localStorage.setItem('watchlist', JSON.stringify(fw)); }
-    else { await _db.ref(`watchlists/${_currentUser.uid}`).set(getWatchlist()); }
+    if (fw && Array.isArray(fw)) { localStorage.setItem(MKT().wlKey, JSON.stringify(fw)); }
+    else { await _db.ref(`${MKT().fbWl}/${_currentUser.uid}`).set(getWatchlist()); }
   } catch (err) { console.warn('Could not sync watchlist from Firebase:', err); }
 }
 
@@ -2459,7 +2571,7 @@ async function syncStockDataFromFirebase() {
   if (!_currentUser) return;
   try {
     const local = getStoredData();
-    const snapshot = await _db.ref(`stockData/${_currentUser.uid}`).once('value');
+    const snapshot = await _db.ref(`${MKT().fbData}/${_currentUser.uid}`).once('value');
     const remote = snapshot.val() || {};
     const merged = mergeStoredData(local, remote);
     writeStoredData(merged);
@@ -2661,7 +2773,7 @@ function buildChatCtx() {
   if (!currentRecord) return {};
   const d=currentRecord, a=d.aiAnalysis||{}, ind=d.aiIndicators||{}, fun=d.fundamentals||{};
   return {
-    symbol:d.symbol, name:d.name, sector:d.sector, signal:d.signal,
+    symbol:d.symbol, name:d.name, sector:d.sector, signal:d.signal, market:MARKET,
     confidence:a.confidence, summary:a.summary, outlook:a.outlook,
     keyRisk:a.keyRisk, support:a.support, resistance:a.resistance,
     technicalPoints:a.technicalPoints,
@@ -2819,6 +2931,7 @@ async function sendPortfolioMessage(prefill) {
       body: JSON.stringify({
         messages: _pcMsgs.map(function(m) { return { role: m.role, content: m.content }; }),
         portfolioContext: portfolio,
+        market: MARKET,
       }),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2874,7 +2987,7 @@ function renderMobileWatchlist() {
         const d = stored[sym], k = KNOWN_STOCKS.find(x => x.symbol === sym);
         const name   = d?.name || k?.name || sym;
         const signal = analyzingStocks.has(sym) ? 'LOADING' : (d?.signal || 'PENDING');
-        const price  = d?.price?.current ? '₹' + d.price.current.toLocaleString('en-IN') : '—';
+        const price  = d?.price?.current ? CUR() + d.price.current.toLocaleString(LOC()) : '—';
         const isActive = activeStock === sym;
         return `<div class="stock-card${isActive ? ' active' : ''}" onclick="selectStockMobile('${sym}')" style="${isActive ? 'border-left:3px solid var(--accent);' : ''}">
           <div class="stock-card-top">
@@ -2970,7 +3083,7 @@ function renderSidebar() {
   document.getElementById('watchlist-container').innerHTML = wl.map(sym=>{
     const d=stored[sym], k=KNOWN_STOCKS.find(x=>x.symbol===sym);
     const name=d?.name||k?.name||sym, signal=analyzingStocks.has(sym)?'LOADING':(d?.signal||'PENDING');
-    const price=d?.price?.current?'₹'+d.price.current.toLocaleString('en-IN'):'—';
+    const price=d?.price?.current?CUR()+d.price.current.toLocaleString(LOC()):'—';
     const upsidePct=d?.targets?.average&&d?.price?.current?((d.targets.average-d.price.current)/d.price.current)*100:null;
     let upsideText = signal==='LOADING' ? 'Analysing…' : signal==='PENDING' ? 'Pending analysis' : '—';
     let upsideStyle = signal==='PENDING'||signal==='LOADING' ? 'color:var(--text3)' : '';
@@ -3017,18 +3130,18 @@ function selectStock(sym) {
     // Update only price elements in the header DOM — don't re-render the whole page
     const priceEl = document.getElementById('live-price');
     const changeEl = document.getElementById('live-change');
-    if (priceEl && p.price != null) priceEl.textContent = '₹' + p.price.toLocaleString('en-IN');
+    if (priceEl && p.price != null) priceEl.textContent = CUR() + p.price.toLocaleString(LOC());
     if (changeEl && p.changePct != null) {
       const chg = p.changePct;
       changeEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
-      changeEl.textContent = `${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}% · 52W: ₹${rec.price?.weekLow52 || '—'} – ₹${rec.price?.weekHigh52 || '—'}`;
+      changeEl.textContent = `${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}% · 52W: ${CUR()}${rec.price?.weekLow52 || '—'} – ${CUR()}${rec.price?.weekHigh52 || '—'}`;
     }
   }).catch(() => {});
 }
 
 async function fetchLatestPrice(sym) {
   try {
-    const res = await fetch(`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&priceOnly=1`);
+    const res = await fetch(`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&priceOnly=1${mktParam()}`);
     if (!res.ok) return null;
     const j = await res.json();
     return { price: j.price, changePct: j.changePct, high52: j.high52, low52: j.low52 };
@@ -3071,6 +3184,7 @@ function renderError(sym,msg) {
 // ── TRIGGER ANALYSIS (AI only — updates scorecard/deepdive in place) ───────────
 async function triggerAnalysis(sym) {
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  const _m=MARKET;
   activeStock=sym;
   // Show spinner in-place inside AI scorecard panel only
   const scEl=document.getElementById('ai-scorecard-wrap');
@@ -3105,8 +3219,8 @@ async function triggerAnalysis(sym) {
     },
   } : null;
   try {
-    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
-    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}`;
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundFor(sym);
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}${mktParam()}`;
     const res=await fetch(url); const result=await res.json();
     if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
     const ind=result.indicators||{}, analysis=result.analysis||{};
@@ -3116,8 +3230,8 @@ async function triggerAnalysis(sym) {
       symbol:sym, name, sector, signal:analysis.signal||'HOLD', signalReason:analysis.summary||'',
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
-      aiAnalysis:analysis, aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
-      targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
+      aiAnalysis:analysis, aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundFor(sym)},
+      targets:{average:fundFor(sym)?.targetPrice||ind.price,low:ind.low52w,high:fundFor(sym)?.targetPrice||(ind.high52w*1.05)},
       analysts:{buy:0,hold:0,sell:0},
       ohlcv:result.ohlcv||existingData?.ohlcv||[],
       ema20Series:result.ema20Series||existingData?.ema20Series||[],
@@ -3126,7 +3240,7 @@ async function triggerAnalysis(sym) {
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
       previousAnalysis: prevForDelta,
     };
-    storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar();
+    storeAnalysis(sym,record,_m); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal,market:_m}); renderSidebar();
     if (activeStock === sym) {
       // Update AI panels in-place without touching chart / metrics
       const sc = document.getElementById('ai-scorecard-wrap');
@@ -3159,16 +3273,17 @@ async function triggerAnalysis(sym) {
 // ── FETCH DATA ONLY (no AI) ────────────────────────────────────────────────────
 async function fetchDataOnly(sym) {
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  const _m=MARKET;
   activeStock=sym;
   document.getElementById('main-content').innerHTML=`
     <div class="stock-header"><div class="stock-header-left"><h2>${name}</h2><div class="meta"><span class="updated-text">NSE: ${sym}</span></div></div></div>
     <div class="loading-state"><div class="spinner"></div><div class="loading-title">Loading ${sym}…</div>
       <div class="loading-steps" style="font-size:13px;color:var(--text3)">📡 Fetching live price, chart data &amp; fundamentals</div>
     </div>`;
-  const stored=getStoredData(); stored[sym]=null; localStorage.setItem('stockData',JSON.stringify(stored)); renderSidebar();
+  const stored=getStoredData(); stored[sym]=null; localStorage.setItem(MKT().dataKey,JSON.stringify(stored)); renderSidebar();
   try {
-    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
-    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1`;
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundFor(sym);
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1${mktParam()}`;
     const res=await fetch(url); const result=await res.json();
     if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
     const ind=result.indicators||{};
@@ -3177,17 +3292,17 @@ async function fetchDataOnly(sym) {
       symbol:sym, name, sector,
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
-      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
-      targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
+      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundFor(sym)},
+      targets:{average:fundFor(sym)?.targetPrice||ind.price,low:ind.low52w,high:fundFor(sym)?.targetPrice||(ind.high52w*1.05)},
       analysts:{buy:0,hold:0,sell:0},
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
-    storeAnalysis(sym,record); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal}); renderSidebar(); renderAnalysis(record);
+    storeAnalysis(sym,record,_m); logEvent('analyze_stock',{symbol:sym,sector,signal:record.signal,market:_m}); renderSidebar(); renderAnalysis(record);
     if (activeStock === sym) fetchNews(sym, true);
   } catch(err) {
     renderError(sym,err.message);
-    const s=getStoredData(); delete s[sym]; localStorage.setItem('stockData',JSON.stringify(s)); renderSidebar();
+    const s=getStoredData(); delete s[sym]; localStorage.setItem(MKT().dataKey,JSON.stringify(s)); renderSidebar();
   }
 }
 
@@ -3196,9 +3311,10 @@ async function _fetchDataBackground(sym) {
   const existing = getStoredData()[sym];
   if (existing?.price?.current) return; // already has price data
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  const _m=MARKET;
   try {
-    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
-    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1`;
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundFor(sym);
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1${mktParam()}`;
     const res=await fetch(url); const result=await res.json();
     if(!res.ok||result.error) return;
     const ind=result.indicators||{}; if(!ind.price) return;
@@ -3208,13 +3324,13 @@ async function _fetchDataBackground(sym) {
       symbol:sym, name, sector,
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
-      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
-      targets:{average:fundDB[sym]?.targetPrice||ind.price,low:ind.low52w,high:fundDB[sym]?.targetPrice||(ind.high52w*1.05)},
+      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundFor(sym)},
+      targets:{average:fundFor(sym)?.targetPrice||ind.price,low:ind.low52w,high:fundFor(sym)?.targetPrice||(ind.high52w*1.05)},
       analysts:{buy:0,hold:0,sell:0},
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
       keyMetrics:{}, quarterly:[], news:[], thesis:[], risks:[],
     };
-    storeAnalysis(sym,record); renderSidebar();
+    storeAnalysis(sym,record,_m); renderSidebar();
     // If user is currently viewing this stock, update the view
     if (activeStock === sym) {
       const sc = document.getElementById('ai-scorecard-wrap');
@@ -3226,9 +3342,10 @@ async function _fetchDataBackground(sym) {
 async function refreshData(sym) {
   const existing=getStoredData()[sym];
   const k=KNOWN_STOCKS.find(x=>x.symbol===sym), sector=k?.sector||'default', name=k?.name||sym;
+  const _m=MARKET;
   try {
-    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundDB[sym]||{};
-    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1`;
+    const{quarterlyResults:_qr,notes:_n,...fundForParam}=fundFor(sym);
+    const url=`${API_BASE}/analyze?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}&sector=${encodeURIComponent(sector)}&fund=${encodeURIComponent(JSON.stringify(fundForParam))}&dataOnly=1${mktParam()}`;
     const res=await fetch(url); const result=await res.json();
     if(!res.ok||result.error) throw new Error(result.error||`HTTP ${res.status}`);
     const ind=result.indicators||{};
@@ -3238,10 +3355,10 @@ async function refreshData(sym) {
       symbol:sym, name, sector,
       lastUpdated:new Date().toISOString(),
       price:{current:ind.price,changePercent:ind.changePct,weekHigh52:ind.high52w,weekLow52:ind.low52w},
-      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundDB[sym]||{}},
+      aiIndicators:ind, fundamentals:{...result.fundamentals||{},...fundFor(sym)},
       ohlcv:result.ohlcv||[], ema20Series:result.ema20Series||[], ema50Series:result.ema50Series||[], ema200Series:result.ema200Series||[],
     };
-    storeAnalysis(sym,record); renderSidebar(); renderAnalysis(record);
+    storeAnalysis(sym,record,_m); renderSidebar(); renderAnalysis(record);
   } catch(err) {
     alert('Refresh failed: '+err.message);
   }
@@ -3264,11 +3381,11 @@ function _startPriceRefresh(sym) {
     storeAnalysis(sym,rec);
     const priceEl=document.getElementById('live-price');
     const changeEl=document.getElementById('live-change');
-    if(priceEl) priceEl.textContent='₹'+(p.price||0).toLocaleString('en-IN');
+    if(priceEl) priceEl.textContent=CUR()+(p.price||0).toLocaleString(LOC());
     if(changeEl&&p.changePct!=null){
       const chg=p.changePct;
       changeEl.style.color=chg>=0?'var(--green)':'var(--red)';
-      changeEl.textContent=`${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}% · 52W: ₹${rec.price?.weekLow52||'—'} – ₹${rec.price?.weekHigh52||'—'}`;
+      changeEl.textContent=`${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}% · 52W: ${CUR()}${rec.price?.weekLow52||'—'} – ${CUR()}${rec.price?.weekHigh52||'—'}`;
     }
     renderSidebar();
   },30000);
@@ -3322,15 +3439,15 @@ function renderPriceChart(record,tf) {
       plugins:{legend:{labels:{color:tickCol,font:{size:11},boxWidth:18,padding:14}},
         tooltip:{callbacks:{
           title:ctx=>{const ts=ctx[0]?.raw?.x??ctx[0]?.parsed?.x;return ts?new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}):'';}  ,
-          label:ctx=>{if(ctx.datasetIndex===0){const p=ctx.raw;return[`O ₹${p.o?.toFixed(2)}   H ₹${p.h?.toFixed(2)}`,`L ₹${p.l?.toFixed(2)}   C ₹${p.c?.toFixed(2)}`];}return`${ctx.dataset.label}: ₹${ctx.raw?.y?.toFixed(2)??'—'}`;}
+          label:ctx=>{if(ctx.datasetIndex===0){const p=ctx.raw;return[`O ${CUR()}${p.o?.toFixed(2)}   H ${CUR()}${p.h?.toFixed(2)}`,`L ${CUR()}${p.l?.toFixed(2)}   C ${CUR()}${p.c?.toFixed(2)}`];}return`${ctx.dataset.label}: ${CUR()}${ctx.raw?.y?.toFixed(2)??'—'}`;}
         }}},
-      scales:{x:xDef,y:{position:'right',suggestedMin:pMin,suggestedMax:pMax,ticks:{color:tickCol,font:{size:10},callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:gridCol}}}}});
+      scales:{x:xDef,y:{position:'right',suggestedMin:pMin,suggestedMax:pMax,ticks:{color:tickCol,font:{size:10},callback:v=>CUR()+v.toLocaleString(LOC())},grid:{color:gridCol}}}}});
     const vc=slice.map(r=>r.c>=r.o?'rgba(34,197,94,.55)':'rgba(239,68,68,.55)');
     volChart=new Chart(vCtx,{type:'bar',data:{datasets:[{data:slice.map(r=>({x:r.t,y:r.v})),backgroundColor:vc,borderWidth:0,borderRadius:1,categoryPercentage:.95,barPercentage:.95}]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{
         title:ctx=>{const ts=ctx[0]?.raw?.x;return ts?new Date(ts).toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'';}  ,
-        label:ctx=>{const v=ctx.raw?.y;return v==null?'':'Vol: '+(v>=1e7?(v/1e7).toFixed(2)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':(v/1e3).toFixed(0)+'K');}
-      }}},scales:{x:{type:'timeseries',ticks:{display:false},grid:{display:false}},y:{position:'right',ticks:{color:tickCol,font:{size:9},maxTicksLimit:3,callback:v=>v>=1e7?(v/1e7).toFixed(0)+'Cr':v>=1e5?(v/1e5).toFixed(0)+'L':(v/1e3).toFixed(0)+'K'},grid:{color:gridCol}}}}});
+        label:ctx=>{const v=ctx.raw?.y;return v==null?'':'Vol: '+fmtVol(v);}
+      }}},scales:{x:{type:'timeseries',ticks:{display:false},grid:{display:false}},y:{position:'right',ticks:{color:tickCol,font:{size:9},maxTicksLimit:3,callback:v=>fmtVol(v)},grid:{color:gridCol}}}}});
   } catch(err) { console.error('Chart render error:',err.message); }
 }
 
@@ -3361,7 +3478,7 @@ function renderSRBar(record) {
       <div class="sr-top-row">
         <span>🛡 Support</span>
         <span style="color:var(--text2);font-size:10.5px;font-weight:500;text-transform:none;letter-spacing:0">
-          Current: ₹${curVal.toLocaleString('en-IN')}
+          Current: ${CUR()}${curVal.toLocaleString(LOC())}
         </span>
         <span>🎯 Resistance</span>
       </div>
@@ -3396,7 +3513,7 @@ function renderDeepDive(record) {
   const eel = a.entryExitLevels || {};
   const splitPrice = s => {
     if (!s) return { price: '', reason: '' };
-    const m = s.match(/^(₹[\d,\.]+(?:\s*[–\-]\s*₹[\d,\.]+)?)(.*)/);
+    const m = s.match(/^([₹$][\d,\.]+(?:\s*[–\-]\s*[₹$][\d,\.]+)?)(.*)/);
     return m ? { price: m[1].trim(), reason: m[2].replace(/^[\s\-–—:]+/, '').trim() } : { price: '', reason: s };
   };
   const buyZ  = splitPrice(eel.buyZone);
@@ -3543,7 +3660,7 @@ function renderScreenerMetrics(record) {
   const fun = record.fundamentals  || {};
   const p   = record.price         || {};
 
-  const fmtCr  = v => v == null ? null : v >= 100000 ? (v/100000).toFixed(1)+'L Cr' : v >= 1000 ? (v/1000).toFixed(1)+'K Cr' : v.toFixed(0)+' Cr';
+  const fmtCr  = v => fmtCap(v);
   const fmtPct = v => v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : null;
   const fmtX   = v => v != null ? v.toFixed(2) + 'x' : null;
   const qcls   = (v, hi, lo) => v == null ? '' : v >= hi ? 'good' : v <= lo ? 'bad' : 'neutral';
@@ -3572,12 +3689,12 @@ function renderScreenerMetrics(record) {
   // ── TAB 1: Price Action & Market ─────────────────────────────────────
   const priceTab = [
     fun.marketCapCr ? cell('Market Cap', fmtCr(fun.marketCapCr)) : null,
-    curr ? cell('Current Price', '₹' + curr.toLocaleString('en-IN'),
+    curr ? cell('Current Price', CUR() + curr.toLocaleString(LOC()),
       p.changePercent != null ? (p.changePercent >= 0 ? '▲ +' : '▼ ') + Math.abs(p.changePercent).toFixed(2) + '% today' : '',
       '', p.changePercent >= 0 ? 'good' : 'bad') : null,
-    h52 ? cell('52W High', '₹' + h52.toLocaleString('en-IN'),
+    h52 ? cell('52W High', CUR() + h52.toLocaleString(LOC()),
       curr && h52 ? ((curr / h52 - 1) * 100).toFixed(1) + '% from high' : '', '', 'bad') : null,
-    l52 ? cell('52W Low', '₹' + l52.toLocaleString('en-IN'),
+    l52 ? cell('52W Low', CUR() + l52.toLocaleString(LOC()),
       curr && l52 ? '+' + ((curr / l52 - 1) * 100).toFixed(1) + '% from low' : '', '', 'good') : null,
     ind.change30d != null ? cell('30d Return',
       (ind.change30d >= 0 ? '+' : '') + ind.change30d + '%', '',
@@ -3586,7 +3703,7 @@ function renderScreenerMetrics(record) {
       (ind.volRatio * 100).toFixed(0) + '%',
       ind.volRatio > 1 ? 'Above average' : 'Below average',
       '', ind.volRatio > 1 ? 'good' : 'bad') : null,
-    fun.targetPrice ? cell('Analyst Target', '₹' + fun.targetPrice.toFixed(0),
+    fun.targetPrice ? cell('Analyst Target', CUR() + fun.targetPrice.toFixed(0),
       upside != null ? (upside >= 0 ? '+' : '') + upside.toFixed(1) + '% upside' : '',
       '', upside != null && upside >= 0 ? 'good' : 'bad') : null,
     fun.recommendation ? cell('Consensus',
@@ -3601,10 +3718,10 @@ function renderScreenerMetrics(record) {
     fun.pe  ? cell('Stock P/E', fun.pe.toFixed(1) + 'x',
       fun.forwardPE ? 'Fwd ' + fun.forwardPE.toFixed(1) + 'x' : '') : null,
     fun.pbRatio ? cell('Price / Book', fmtX(fun.pbRatio),
-      fun.bookValue ? 'Book ₹' + fun.bookValue : '') : null,
-    fun.eps ? cell('EPS (TTM)', '₹' + fun.eps.toFixed(2), '', qcls(fun.eps, 0.01, -0.01)) : null,
+      fun.bookValue ? 'Book ' + CUR() + fun.bookValue : '') : null,
+    fun.eps ? cell('EPS (TTM)', CUR() + fun.eps.toFixed(2), '', qcls(fun.eps, 0.01, -0.01)) : null,
     divYield != null ? cell('Div Yield', divYield.toFixed(2) + '%',
-      fun.dividendRate ? '₹' + fun.dividendRate + ' / share' : '',
+      fun.dividendRate ? CUR() + fun.dividendRate + ' / share' : '',
       qcls(divYield, 3, 0)) : null,
     fun.roe  ? cell('ROE',  fun.roe.toFixed(1) + '%',  'Return on Equity', qcls(fun.roe, 15, 5)) : null,
     fun.roce ? cell('ROCE', fun.roce.toFixed(1) + '%', 'Return on Capital', qcls(fun.roce, 10, 2)) : null,
@@ -3634,7 +3751,7 @@ function renderScreenerMetrics(record) {
   return `
     <div class="metrics-v2-hdr">
       <div class="section-title" style="margin-bottom:0">📊 Key Metrics</div>
-      <span class="metrics-source">Screener.in · ${fundDB[record.symbol]?.lastResultDate || '—'}</span>
+      <span class="metrics-source">Screener.in · ${fundFor(record.symbol)?.lastResultDate || '—'}</span>
     </div>
     <div class="metrics-tab-bar-v2">
       <button class="mtab active" onclick="switchMetricsTab(0, this)">Price Action</button>
@@ -3864,7 +3981,7 @@ async function fetchNews(sym, force = false) {
   wrap.innerHTML = renderNewsSkeleton();
 
   try {
-    const res  = await fetch(`${API_BASE}/news?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}`);
+    const res  = await fetch(`${API_BASE}/news?symbol=${encodeURIComponent(sym)}&name=${encodeURIComponent(name)}${mktParam()}`);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
@@ -4007,12 +4124,12 @@ function renderAnalysis(d) {
       <div class="hdr-v2-right">
   <div class="hdr-v2-price-col">
     <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
-      <div class="hdr-v2-price" id="live-price">₹${(d.price?.current || 0).toLocaleString('en-IN')}</div>
+      <div class="hdr-v2-price" id="live-price">${CUR()}${(d.price?.current || 0).toLocaleString(LOC())}</div>
       <span id="ai-signal-pill-wrap">${d.signal && a.signal ? `<span class="ai-pill ${d.signal}">${pilotLabel}</span>` : ''}</span>
     </div>
     <div class="hdr-v2-change" id="live-change" style="color:${chg >= 0 ? 'var(--green)' : 'var(--red)'}">
       ${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}%
-      &ensp;·&ensp;52W: ₹${d.price?.weekLow52 || '—'} – ₹${d.price?.weekHigh52 || '—'}
+      &ensp;·&ensp;52W: ${CUR()}${d.price?.weekLow52 || '—'} – ${CUR()}${d.price?.weekHigh52 || '—'}
     </div>
   </div>
   <button class="refresh-btn" onclick="refreshData('${d.symbol}')">↺ Refresh</button>
@@ -4085,15 +4202,15 @@ function renderTargets(d,upside) {
   const t=d.targets||{},p=d.price||{};
   const mn=(p.weekLow52||0)*.9,mx=(t.high||p.current||0)*1.05,pct=v=>mx>mn?((v-mn)/(mx-mn)*100).toFixed(0):50;
   return`<div class="card" style="flex:1"><div class="section-title">🎯 Price Levels</div>
-    <div class="target-row"><div class="target-label">Current</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(p.current||0)}%;background:#94a3b8"></div></div><div class="target-val">₹${p.current||'—'}</div></div>
-    <div class="target-row"><div class="target-label">52w Low</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(p.weekLow52||0)}%;background:var(--amber)"></div></div><div class="target-val">₹${p.weekLow52||'—'}</div></div>
-    <div class="target-row"><div class="target-label">52w High</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(p.weekHigh52||0)}%;background:var(--green)"></div></div><div class="target-val">₹${p.weekHigh52||'—'}</div></div>
-    ${t.average&&t.average!==p.current?`<div class="target-row"><div class="target-label">Analyst Tgt</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(t.average)}%;background:var(--accent)"></div></div><div class="target-val">₹${t.average.toFixed(0)}</div></div>`:''}
+    <div class="target-row"><div class="target-label">Current</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(p.current||0)}%;background:#94a3b8"></div></div><div class="target-val">${CUR()}${p.current||'—'}</div></div>
+    <div class="target-row"><div class="target-label">52w Low</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(p.weekLow52||0)}%;background:var(--amber)"></div></div><div class="target-val">${CUR()}${p.weekLow52||'—'}</div></div>
+    <div class="target-row"><div class="target-label">52w High</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(p.weekHigh52||0)}%;background:var(--green)"></div></div><div class="target-val">${CUR()}${p.weekHigh52||'—'}</div></div>
+    ${t.average&&t.average!==p.current?`<div class="target-row"><div class="target-label">Analyst Tgt</div><div class="target-bar-wrap"><div class="target-bar-fill" style="width:${pct(t.average)}%;background:var(--accent)"></div></div><div class="target-val">${CUR()}${t.average.toFixed(0)}</div></div>`:''}
     ${upside!=='—'?`<div style="margin-top:8px;font-size:12px;color:var(--text3)">Upside to target: <span style="color:var(--green);font-weight:700">+${upside}%</span></div>`:''}
     <div class="analyst-pills">
-      <div class="analyst-pill pill-buy"><div class="count">${fundDB[d.symbol]?.analystBuy||d.analysts?.buy||0}</div><div class="lbl">Buy</div></div>
-      <div class="analyst-pill pill-hold"><div class="count">${fundDB[d.symbol]?.analystHold||d.analysts?.hold||0}</div><div class="lbl">Hold</div></div>
-      <div class="analyst-pill pill-sell"><div class="count">${fundDB[d.symbol]?.analystSell||d.analysts?.sell||0}</div><div class="lbl">Sell</div></div>
+      <div class="analyst-pill pill-buy"><div class="count">${fundFor(d.symbol)?.analystBuy||d.analysts?.buy||0}</div><div class="lbl">Buy</div></div>
+      <div class="analyst-pill pill-hold"><div class="count">${fundFor(d.symbol)?.analystHold||d.analysts?.hold||0}</div><div class="lbl">Hold</div></div>
+      <div class="analyst-pill pill-sell"><div class="count">${fundFor(d.symbol)?.analystSell||d.analysts?.sell||0}</div><div class="lbl">Sell</div></div>
     </div></div>`;
 }
 function renderNews(d){if(!d.news?.length)return'';return`<div class="card" style="flex:1"><div class="section-title">📰 Latest Developments</div>${d.news.map(n=>`<div class="news-item"><div class="news-dot ${n.sentiment}"></div><div>${n.url?`<a class="news-title" href="${n.url}" target="_blank" style="color:var(--text);text-decoration:none">${n.title}</a>`:`<div class="news-title">${n.title}</div>`}<div class="news-date">${n.date}</div></div></div>`).join('')}</div>`;}

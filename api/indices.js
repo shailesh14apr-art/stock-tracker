@@ -53,6 +53,19 @@ const CORS = {
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
+  const market = new URL(req.url).searchParams.get('market');
+
+  if (market === 'global') {
+    const [sp500, nasdaq, dow] = await Promise.all([
+      fetchIndex('^GSPC'),
+      fetchIndex('^IXIC'),
+      fetchIndex('^DJI'),
+    ]);
+    return new Response(JSON.stringify({ sp500, nasdaq, dow, fetchedAt: new Date().toISOString() }), {
+      headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
+    });
+  }
+
   const [nifty, sensex] = await Promise.all([
     fetchIndex('^NSEI'),
     fetchIndex('^BSESN'),

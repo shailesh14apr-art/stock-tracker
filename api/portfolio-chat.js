@@ -9,13 +9,13 @@ export default async function handler(req) {
   }
 
   try {
-    const { messages, portfolioContext } = await req.json();
+    const { messages, portfolioContext, market } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'Invalid messages' }), { status: 400, headers: cors() });
     }
 
-    const system = buildPortfolioSystem(portfolioContext);
+    const system = buildPortfolioSystem(portfolioContext, market);
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -47,9 +47,11 @@ export default async function handler(req) {
   }
 }
 
-function buildPortfolioSystem(portfolio) {
+function buildPortfolioSystem(portfolio, market) {
+  const isGlobal = market === 'global';
+  const cur = isGlobal ? '$' : '₹';
   if (!portfolio || !portfolio.length) {
-    return `You are an expert financial analyst specialising in Indian equities on NSE/BSE.
+    return `You are an expert financial analyst specialising in ${isGlobal ? 'US-listed equities (NASDAQ/NYSE)' : 'Indian equities on NSE/BSE'}.
 The user's watchlist is empty or no stocks have been analysed yet.
 Politely let them know they need to add stocks and run AI analysis first before you can answer portfolio questions.`;
   }
@@ -66,9 +68,9 @@ Politely let them know they need to add stocks and run AI analysis first before 
     return `
 ### ${s.name} (${s.symbol})${s.sector ? ' — ' + s.sector : ''}
 Signal: **${s.signal || 'N/A'}** | Confidence: ${a.confidence || 'N/A'} | Tech Score: ${ind.techScore != null ? ind.techScore + '/10' : 'N/A'}
-Price: ₹${s.price?.current || 'N/A'} (${todayPct} today, ${pct30} 30d)
+Price: ${cur}${s.price?.current || 'N/A'} (${todayPct} today, ${pct30} 30d)
 RSI: ${ind.rsi || 'N/A'} | MACD: ${ind.macd != null ? ind.macd.toFixed(2) : 'N/A'} | BB%B: ${ind.bbPct != null ? ind.bbPct.toFixed(1) + '%' : 'N/A'}
-SMA20: ₹${ind.sma20 || 'N/A'} | SMA50: ₹${ind.sma50 || 'N/A'}
+SMA20: ${cur}${ind.sma20 || 'N/A'} | SMA50: ${cur}${ind.sma50 || 'N/A'}
 P/E: ${fun.pe != null ? fun.pe.toFixed(1) + 'x' : 'N/A'} | Fwd P/E: ${fun.forwardPE != null ? fun.forwardPE.toFixed(1) + 'x' : 'N/A'} | P/B: ${fun.pbRatio != null ? fun.pbRatio.toFixed(2) + 'x' : 'N/A'}
 ROE: ${fun.roe != null ? fun.roe.toFixed(1) + '%' : 'N/A'} | D/E: ${fun.debtToEquity != null ? fun.debtToEquity.toFixed(2) + 'x' : 'N/A'} | Op Margin: ${fun.operatingMargin != null ? fun.operatingMargin.toFixed(1) + '%' : 'N/A'}
 Summary: ${a.summary || 'No analysis available'}
@@ -85,7 +87,7 @@ Outlook: ${a.outlook || 'N/A'}`.trim();
   const strongest = topScore.slice(0,3).map(s => `${s.symbol} (${s.indicators?.techScore}/10)`).join(', ');
   const weakest   = topScore.slice(-3).reverse().map(s => `${s.symbol} (${s.indicators?.techScore}/10)`).join(', ');
 
-  return `You are an expert financial analyst specialising in Indian equities on NSE/BSE. You are analysing the user's personal watchlist — stocks they follow or own.
+  return `You are an expert financial analyst specialising in ${isGlobal ? 'US-listed equities (NASDAQ/NYSE)' : 'Indian equities on NSE/BSE'}. You are analysing the user's personal watchlist — stocks they follow or own.
 
 ## Watchlist Snapshot
 - Stocks tracked: ${portfolio.length} total (${analysed.length} analysed${unanalysed.length ? ', ' + unanalysed.length + ' pending: ' + unanalysed.join(', ') : ''})
@@ -110,13 +112,13 @@ You can:
 ## Response style
 - Be direct and specific — reference actual numbers from the data
 - Use **bold** for stock names, key figures, and conclusions
-- Use ₹ for all Indian price references
+- Use ${cur} for all price references
 - Keep responses concise and scannable (prefer bullet lists for comparisons)
 - If data is missing for a stock, note it honestly rather than guessing
 - Avoid generic financial advice; anchor every point to the actual watchlist data
 
 ## Disclaimer
-End every response with a single brief line: *For informational purposes only — not SEBI-registered investment advice.*`;
+End every response with a single brief line: *For informational purposes only — not ${isGlobal ? 'SEC' : 'SEBI'}-registered investment advice.*`;
 }
 
 function cors() {

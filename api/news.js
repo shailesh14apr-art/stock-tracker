@@ -69,6 +69,8 @@ export default async function handler(req) {
   const p      = new URL(req.url).searchParams;
   const symbol = p.get('symbol');
   const name   = p.get('name') || symbol;
+  const market = p.get('market') === 'global' ? 'global' : 'in';
+  const exch   = market === 'global' ? 'NASDAQ' : 'NSE';
 
   if (!symbol) return reply({ error: 'symbol is required' }, 400, cors);
 
@@ -77,7 +79,9 @@ export default async function handler(req) {
 
   try {
     // ── 1. Fetch news from Google News RSS — try a couple of query variants ───
-    const queries = [`${name} share price`, `${name} NSE ${symbol}`];
+    const queries = market === 'global'
+      ? [`${name} stock`, `${name} ${symbol} stock news`]
+      : [`${name} share price`, `${name} NSE ${symbol}`];
     const seen = new Map();
     for (const q of queries) {
       const items = await fetchGoogleNews(q);
@@ -126,9 +130,9 @@ export default async function handler(req) {
     if (!articles.length) return reply({ news: [] }, 200, cors);
 
     // ── 3. Claude Haiku — batch sentiment tagging ─────────────────────────────
-    const prompt = `You are a financial news sentiment classifier for Indian equity markets.
+    const prompt = `You are a financial news sentiment classifier for ${market === 'global' ? 'US' : 'Indian'} equity markets.
 
-Classify each headline below by its likely impact on ${name} (NSE: ${symbol}) as a stock.
+Classify each headline below by its likely impact on ${name} (${exch}: ${symbol}) as a stock.
 
 Headlines:
 ${articles.map((a, i) => `${i}: ${a.title}`).join('\n')}

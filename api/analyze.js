@@ -39,6 +39,21 @@ const SECTOR_CONTEXT = {
   default:        'Indian equity — earnings growth, valuation vs peers, technical momentum.'
 };
 
+const SECTOR_CONTEXT_GLOBAL = {
+  it:              'US technology — revenue growth, margins, AI positioning, cloud/software demand.',
+  healthcare:      'US healthcare — pipeline, FDA catalysts, margin trends, pricing pressure.',
+  financials:      'US financials — NIM, credit quality, capital return, rate sensitivity.',
+  industrials:     'US industrials — backlog, capex cycle, margins, freight/aerospace demand.',
+  consumer_disc:   'US consumer discretionary — comparable sales, e-commerce mix, consumer spending.',
+  consumer_staples:'US consumer staples — volume vs pricing, gross margin, brand strength.',
+  communication:   'US communication services — ad revenue, subscriber growth, content costs.',
+  energy:          'US energy — production growth, free cash flow, capital discipline, commodity prices.',
+  materials:       'US materials — pricing spreads, volumes, cost curves. Cyclical.',
+  real_estate:     'US REITs/real estate — FFO growth, occupancy, cap rates, leverage.',
+  utilities:       'US utilities — rate base growth, regulatory environment, dividend safety.',
+  default:         'US-listed equity — earnings growth, valuation vs peers, technical momentum.'
+};
+
 export default async function handler(req) {
   const cors = {
     'Access-Control-Allow-Origin': '*',
@@ -57,10 +72,15 @@ export default async function handler(req) {
   const symbol = p.get('symbol');
   const name   = p.get('name')   || symbol;
   const sector = p.get('sector') || 'default';
+  const market = p.get('market') === 'global' ? 'global' : 'in';
+  const sfx    = market === 'global' ? '' : '.NS';
+  const cur    = market === 'global' ? '$' : '₹';
+  const exch   = market === 'global' ? 'US' : 'NSE';
+  const capDiv = market === 'global' ? 1e9 : 1e7; // $B vs ₹Cr
 
   // priceOnly mode — fast price refresh without full analysis
   if (p.get('priceOnly') === '1') {
-    const yahooSym = symbol.toUpperCase() + '.NS';
+    const yahooSym = symbol.toUpperCase() + sfx;
     try {
       const res = await fetchYF(`/v8/finance/chart/${encodeURIComponent(yahooSym)}?interval=1d&range=5d`);
       if (!res) return reply({ error: 'price fetch failed' }, 500, cors);
@@ -92,7 +112,7 @@ export default async function handler(req) {
   if (!ANTHROPIC_KEY) return reply({ error: 'ANTHROPIC_API_KEY not set' }, 500, cors);
 
   try {
-    const yahooSym = symbol.toUpperCase() + '.NS';
+    const yahooSym = symbol.toUpperCase() + sfx;
     const today    = new Date();
     const oneYrAgo = new Date(today); oneYrAgo.setFullYear(today.getFullYear() - 1);
 
@@ -135,7 +155,7 @@ export default async function handler(req) {
         if (q7.symbol) {
           yfFetchedAny = true;
           yfFund = {
-            marketCapCr:   q7.marketCap                  ? +(q7.marketCap / 1e7).toFixed(0)      : null,
+            marketCapCr:   q7.marketCap                  ? +(q7.marketCap / capDiv).toFixed(market === 'global' ? 1 : 0) : null,
             pe:            q7.trailingPE                  ? +q7.trailingPE.toFixed(2)              : null,
             forwardPE:     q7.forwardPE                   ? +q7.forwardPE.toFixed(2)               : null,
             eps:           q7.epsTrailingTwelveMonths     ? +q7.epsTrailingTwelveMonths.toFixed(2) : null,
@@ -173,7 +193,7 @@ export default async function handler(req) {
             recommendation:  fd.recommendationKey || null,
             pe:              fix(sd.trailingPE),
             forwardPE:       fix(sd.forwardPE),
-            marketCapCr:     rv(sd.marketCap) != null ? +(rv(sd.marketCap)/1e7).toFixed(0) : null,
+            marketCapCr:     rv(sd.marketCap) != null ? +(rv(sd.marketCap)/capDiv).toFixed(market === 'global' ? 1 : 0) : null,
             eps:             fix(ks.trailingEps),
             pbRatio:         fix(ks.priceToBook),
           };
@@ -254,7 +274,7 @@ export default async function handler(req) {
 
     // ── 6. Claude prompt ─────────────────────────────────────────────────────
     const smaLine = (v, l) => v != null
-      ? `- ${l}: ₹${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
+      ? `- ${l}: ${cur}${v.toFixed(2)} (${price > v ? '▲ ABOVE' : '▼ BELOW'} by ${Math.abs(((price/v)-1)*100).toFixed(1)}%)`
       : '';
 
     const knownFundLines = [
@@ -263,28 +283,29 @@ export default async function handler(req) {
       fund.revenueGrowth  != null ? `- Revenue Growth: +${fund.revenueGrowth}% YoY` + (fund.earningsGrowth != null ? ` | Earnings Growth: +${fund.earningsGrowth}%` : '') : '',
       fund.operatingMargin!= null ? `- Operating Margin: ${fund.operatingMargin}%` : '',
       fund.debtToEquity   != null ? `- D/E: ${fund.debtToEquity}x` : '',
-      fund.targetPrice    != null ? `- Analyst Target: ₹${fund.targetPrice} (${fund.analystCount ?? '?'} analysts, consensus: ${(fund.recommendation||'').toUpperCase()})` : '',
+      fund.targetPrice    != null ? `- Analyst Target: ${cur}${fund.targetPrice} (${fund.analystCount ?? '?'} analysts, consensus: ${(fund.recommendation||'').toUpperCase()})` : '',
     ].filter(Boolean).join('\n');
 
     const fundDataStatus = yfFetchedAny
       ? (knownFundLines
           ? `Fetched from Yahoo Finance:\n${knownFundLines}\nFill remaining null fields in knownFundamentals from your training data.`
           : `Yahoo Finance returned no fundamental data for ${symbol}. Fill ALL knownFundamentals fields from your training data.`)
-      : `Yahoo Finance was unreachable. Fill ALL knownFundamentals fields from your training knowledge of ${name} (${symbol}). This is a well-known Indian company — provide realistic estimates based on its most recent financial year. Do NOT leave fields null unless truly not applicable.`;
+      : `Yahoo Finance was unreachable. Fill ALL knownFundamentals fields from your training knowledge of ${name} (${symbol}). This is a well-known ${market === 'global' ? 'US-listed' : 'Indian'} company — provide realistic estimates based on its most recent financial year. Do NOT leave fields null unless truly not applicable.`;
 
-    const prompt = `Indian equity analyst. Sector: ${SECTOR_CONTEXT[sector] || SECTOR_CONTEXT.default}
+    const SC = market === 'global' ? SECTOR_CONTEXT_GLOBAL : SECTOR_CONTEXT;
+    const prompt = `${market === 'global' ? 'US' : 'Indian'} equity analyst. Sector: ${SC[sector] || SC.default}
 
-${name} (NSE: ${symbol}) — TECHNICAL DATA:
-Price ₹${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today) | RSI ${rsi.toFixed(1)} | MACD ${macd.toFixed(2)} vs ${macdSignal.toFixed(2)} (${macd > macdSignal ? 'bull' : 'bear'}) | BB ${bbPct.toFixed(0)}% | 30d ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'} | 52w ₹${low52w.toFixed(2)}–₹${high52w.toFixed(2)} (${(((price-low52w)/(high52w-low52w))*100).toFixed(0)}%) | Vol ${(volRatio*100).toFixed(0)}% of avg
+${name} (${exch}: ${symbol}) — TECHNICAL DATA:
+Price ${cur}${price.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}% today) | RSI ${rsi.toFixed(1)} | MACD ${macd.toFixed(2)} vs ${macdSignal.toFixed(2)} (${macd > macdSignal ? 'bull' : 'bear'}) | BB ${bbPct.toFixed(0)}% | 30d ${change30d !== null ? (change30d >= 0 ? '+' : '') + change30d.toFixed(2) + '%' : 'N/A'} | 52w ${cur}${low52w.toFixed(2)}–${cur}${high52w.toFixed(2)} (${(((price-low52w)/(high52w-low52w))*100).toFixed(0)}%) | Vol ${(volRatio*100).toFixed(0)}% of avg
 ${smaLine(sma20, 'SMA20')} ${smaLine(sma50, 'SMA50')}
 Signal score: ${techScoreNorm}/10
 
 FUNDAMENTALS: ${fundDataStatus}
 
 Reply ONLY with compact JSON (no markdown):
-{"signal":"BUY"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"1 sentence","technicalNarrative":"1-2 sentences on key indicators","valuationContext":"1 sentence on PE vs peers","entryExitLevels":{"buyZone":"₹X–₹Y","breakoutLevel":"₹X","technicalTarget":"₹X–₹Y","stopLoss":"₹X"},"investorAction":"BUY_GRADUALLY"|"WAIT_FOR_DIP"|"BUY_ON_BREAKOUT"|"HOLD_EXISTING"|"REDUCE","investorActionReason":"1 sentence","confidenceReason":"1 sentence","keyRisks":["risk1","risk2","risk3"],"support":"₹X","resistance":"₹X","outlook":"1 sentence","technicalPoints":["pt1","pt2","pt3"],"knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
+{"signal":"BUY"|"HOLD"|"REVIEW","confidence":"HIGH"|"MEDIUM"|"LOW","summary":"1 sentence","technicalNarrative":"1-2 sentences on key indicators","valuationContext":"1 sentence on PE vs peers","entryExitLevels":{"buyZone":"${cur}X–${cur}Y","breakoutLevel":"${cur}X","technicalTarget":"${cur}X–${cur}Y","stopLoss":"${cur}X"},"investorAction":"BUY_GRADUALLY"|"WAIT_FOR_DIP"|"BUY_ON_BREAKOUT"|"HOLD_EXISTING"|"REDUCE","investorActionReason":"1 sentence","confidenceReason":"1 sentence","keyRisks":["risk1","risk2","risk3"],"support":"${cur}X","resistance":"${cur}X","outlook":"1 sentence","technicalPoints":["pt1","pt2","pt3"],"knownFundamentals":{"pe":null,"forwardPE":null,"pbRatio":null,"eps":null,"roe":null,"roce":null,"operatingMargin":null,"revenueGrowth":null,"earningsGrowth":null,"debtToEquity":null,"dividendYield":null,"marketCapCr":null,"targetPrice":null,"analystCount":null,"recommendation":null}}
 
-knownFundamentals: dividendYield=decimal (0.008=0.8%); roe/roce/margins/growth=percent number; debtToEquity=ratio.`;
+knownFundamentals: dividendYield=decimal (0.008=0.8%); roe/roce/margins/growth=percent number; debtToEquity=ratio; marketCapCr=${market === 'global' ? 'market cap in USD billions' : 'market cap in ₹ crore'}.`;
 
     // ── 7. Claude ────────────────────────────────────────────────────────────
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -338,7 +359,7 @@ knownFundamentals: dividendYield=decimal (0.008=0.8%); roe/roce/margins/growth=p
     }
 
     return reply({
-      symbol: symbol.toUpperCase(), name,
+      symbol: symbol.toUpperCase(), name, market,
       indicators: {
         price: +price.toFixed(2), changePct: +changePct.toFixed(2),
         sma20: +sma20.toFixed(2), sma50: sma50 ? +sma50.toFixed(2) : null,
