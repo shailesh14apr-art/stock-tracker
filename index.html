@@ -1386,7 +1386,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <nav class="lp-nav" style="position:relative;">
     <div class="lp-nav-inner">
       <div class="lp-brand">
-        📈 <span>Bazaar</span><span class="lp-brand-accent">Lens</span>
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:6px;flex-shrink:0;display:inline-block;vertical-align:middle"><rect width="26" height="26" rx="6" fill="#2563eb"/><rect x="3.5" y="15" width="4.5" height="8" rx="1" fill="rgba(255,255,255,0.45)"/><rect x="10.75" y="9" width="4.5" height="14" rx="1" fill="rgba(255,255,255,0.75)"/><rect x="18" y="3" width="4.5" height="20" rx="1" fill="white"/><path d="M5.75 17 L13 11.5 L20.25 6" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg> <span>Bazaar</span><span class="lp-brand-accent">Lens</span>
         <span class="lp-brand-badge">Beta</span>
       </div>
       <div class="lp-nav-right">
@@ -1413,7 +1413,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <section class="lp-hero">
     <div class="lp-hero-left">
       <div class="lp-hero-tag" title="Claude Sonnet — Anthropic's flagship financial-reasoning model">🤖 Powered by Claude Sonnet AI</div>
-      <h1>AI Stock Analysis<br>for&nbsp;<span class="accent">Indian Equities</span></h1>
+      <h1>AI Stock Analysis<br>for&nbsp;<span class="accent">India &amp; US Markets</span></h1>
       <p class="lp-hero-sub">Get instant Buy / Hold / Review signals on 1,000+ Indian &amp; US stocks. Live charts, AI-tagged news, delta analysis, and an AI financial expert — all in one place.</p>
       <div class="lp-cta-row">
         <button class="lp-cta-primary" onclick="showLoginFromLanding('signup')">Start for Free →</button>
@@ -1423,6 +1423,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     </div>
     <div class="lp-hero-right">
       <div class="lp-preview">
+        <!-- Stock header -->
         <div class="lp-preview-hdr">
           <div>
             <div class="lp-preview-sym">HDFCBANK</div>
@@ -1433,15 +1434,34 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
             <div class="lp-preview-chg">▲ +0.86% today</div>
           </div>
         </div>
-        <div class="lp-preview-chat">
+        <!-- Signal banner — matches real app -->
+        <div class="lp-preview-signal" style="margin:12px 12px 0;gap:0;flex-direction:column;">
+          <div style="margin-bottom:5px"><span class="lp-illustrative-badge">Illustrative example — not live data</span></div>
+          <div class="lp-preview-sig-title" style="font-size:13px;">🟢 BUY · HIGH CONFIDENCE · 7.4/10</div>
+          <div class="lp-preview-sig-text" style="margin-top:4px;">Strong bullish confluence. Price above EMA 20 &amp; 50. RSI at 61, MACD bullish crossover. Volume above average confirming momentum.</div>
+        </div>
+        <!-- Indicator scorecard pills -->
+        <div style="margin:10px 12px 0;display:flex;flex-wrap:wrap;gap:5px;">
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28);">RSI 61 ✓</span>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28);">MACD ↑ ✓</span>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28);">EMA 20/50 ✓</span>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28);">Volume ↑ ✓</span>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.28);">BB Neutral</span>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.28);">Fundamentals ✓</span>
+        </div>
+        <!-- Key metrics row -->
+        <div class="lp-preview-metrics" style="margin-top:10px;">
+          <div class="lp-pm"><div class="lp-pm-l">P/E</div><div class="lp-pm-v">20.1x</div></div>
+          <div class="lp-pm"><div class="lp-pm-l">ROE</div><div class="lp-pm-v g">16.8%</div></div>
+          <div class="lp-pm"><div class="lp-pm-l">Target</div><div class="lp-pm-v g">₹1,900</div></div>
+          <div class="lp-pm"><div class="lp-pm-l">Score</div><div class="lp-pm-v g">7.4/10</div></div>
+        </div>
+        <!-- AI chat bar at bottom -->
+        <div class="lp-preview-chat" style="margin:10px 12px 12px;">
           <div class="lp-preview-chat-hdr">
-            <span style="font-size:15px">🤖</span>
+            <span style="font-size:13px">🤖</span>
             <span class="lp-preview-chat-title">Ask AI about HDFCBANK</span>
             <span class="lp-preview-chat-badge">Claude Sonnet</span>
-          </div>
-          <div class="lp-preview-inp">
-            <span>Ask about this stock — technicals, risks, outlook…</span>
-            <span class="lp-preview-send">↑</span>
           </div>
           <div class="lp-preview-chips-row">
             <span class="lp-preview-chip">Why is the view Positive?</span>
@@ -1449,20 +1469,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
             <span class="lp-preview-chip">Short-term outlook?</span>
           </div>
         </div>
-        <div class="lp-preview-signal">
-          <div>
-            <div style="margin-bottom:4px"><span class="lp-illustrative-badge">Illustrative example — not live data</span></div>
-            <div class="lp-preview-sig-title">🟢 BUY · HIGH CONFIDENCE · 7.4/10</div>
-            <div class="lp-preview-sig-text">Strong bullish confluence. Price above EMA 20 &amp; 50. RSI at 61, MACD bullish crossover. Volume above average confirming momentum.</div>
-          </div>
-        </div>
-        <div class="lp-preview-metrics">
-          <div class="lp-pm"><div class="lp-pm-l">P/E</div><div class="lp-pm-v">20.1x</div></div>
-          <div class="lp-pm"><div class="lp-pm-l">ROE</div><div class="lp-pm-v g">16.8%</div></div>
-          <div class="lp-pm"><div class="lp-pm-l">RSI</div><div class="lp-pm-v">61.4</div></div>
-          <div class="lp-pm"><div class="lp-pm-l">Score</div><div class="lp-pm-v g" title="Composite score across 7 technicals + fundamentals">7.4/10</div></div>
-        </div>
-        <div style="margin:0 12px 10px;font-size:9px;color:var(--text3);line-height:1.5;">Score = composite of 7 indicators (RSI, MACD, EMA, Bollinger, volume, fundamentals, analyst consensus) · <strong>Buy</strong> = positive research view · <strong>Hold</strong> = neutral/watch · <strong>Review</strong> = reassess</div>
       </div>
     </div>
   </section>
@@ -1570,7 +1576,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <!-- Footer -->
   <footer class="lp-footer">
     <div class="lp-footer-inner">
-      <div class="lp-footer-brand">📈 BazaarLens</div>
+      <div class="lp-footer-brand" style="display:flex;align-items:center;gap:8px;"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:6px;flex-shrink:0;display:inline-block;vertical-align:middle"><rect width="26" height="26" rx="6" fill="#2563eb"/><rect x="3.5" y="15" width="4.5" height="8" rx="1" fill="rgba(255,255,255,0.45)"/><rect x="10.75" y="9" width="4.5" height="14" rx="1" fill="rgba(255,255,255,0.75)"/><rect x="18" y="3" width="4.5" height="20" rx="1" fill="white"/><path d="M5.75 17 L13 11.5 L20.25 6" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg> BazaarLens</div>
       <div class="lp-footer-disc">⚠️ BazaarLens provides AI-generated research analysis for informational purposes only. This does not constitute investment advice or a personalised investment recommendation. BazaarLens is <strong>not a SEBI-registered Investment Adviser or Research Analyst</strong>. Consult a SEBI-registered Investment Adviser before making any investment decisions. Past performance does not guarantee future results.</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
         <a href="/privacy" class="lp-footer-link">Privacy Policy</a>
@@ -1589,7 +1595,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div id="login-overlay" class="hidden" onclick="handleLoginOverlayClick(event)">
   <div class="lo-left">
     <div class="lo-brand">
-      <div class="lo-brand-icon">📈</div>
+      <div class="lo-brand-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:8px;flex-shrink:0"><rect width="32" height="32" rx="8" fill="#2563eb"/><rect x="4" y="19" width="5.5" height="9" rx="1.2" fill="rgba(255,255,255,0.45)"/><rect x="13.25" y="11" width="5.5" height="17" rx="1.2" fill="rgba(255,255,255,0.75)"/><rect x="22.5" y="4" width="5.5" height="24" rx="1.2" fill="white"/><path d="M6.75 21 L16 14 L25.25 7.5" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div><h2 style="font-size:26px;font-weight:700;color:#f1f5f9;letter-spacing:-.4px;">BazaarLens</h2><p>AI-powered weekly analysis for Indian equities</p></div>
     </div>
     <div class="lo-pills">
@@ -1613,7 +1619,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="lo-right">
     <div class="lo-card">
       <button class="lo-close-btn" onclick="dismissLogin()" aria-label="Close">✕</button>
-      <div class="lo-card-icon">📈</div>
+      <div class="lo-card-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="28" rx="7" fill="#2563eb"/><rect x="3.5" y="16" width="5" height="8.5" rx="1" fill="rgba(255,255,255,0.45)"/><rect x="11.5" y="10" width="5" height="14.5" rx="1" fill="rgba(255,255,255,0.75)"/><rect x="19.5" y="3.5" width="5" height="21" rx="1" fill="white"/><path d="M6 18 L14 12.5 L22 7" stroke="rgba(255,255,255,0.28)" stroke-width="1.4" stroke-linecap="round"/></svg></div>
       <div class="lo-card-head"><h2>Welcome back</h2><p>Sign in to your watchlist</p></div>
       <div class="lo-email-sent" id="lo-email-sent">
         <div class="lo-sent-icon">📧</div>
@@ -1665,7 +1671,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <!-- ── HUB PAGE ──────────────────────────────────────────────────────────── -->
 <div id="hub">
   <div class="hub-header">
-    <div class="hub-brand"><span>📈</span> BazaarLens<span class="hub-brand-badge">Beta</span></div>
+    <div class="hub-brand"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:6px;flex-shrink:0;display:inline-block;vertical-align:middle"><rect width="26" height="26" rx="6" fill="#2563eb"/><rect x="3.5" y="15" width="4.5" height="8" rx="1" fill="rgba(255,255,255,0.45)"/><rect x="10.75" y="9" width="4.5" height="14" rx="1" fill="rgba(255,255,255,0.75)"/><rect x="18" y="3" width="4.5" height="20" rx="1" fill="white"/><path d="M5.75 17 L13 11.5 L20.25 6" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg> BazaarLens<span class="hub-brand-badge">Beta</span></div>
     <!-- Market Indices Ticker -->
     <div class="hub-indices-bar" id="hub-indices">
       <div class="hub-index-item" id="hub-nifty">
@@ -1885,7 +1891,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <aside id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-header-row">
-      <div><h2 style="font-size:16px;font-weight:700;letter-spacing:-.3px;">📈 BazaarLens</h2><p id="sidebar-market-label">AI-powered weekly analysis</p></div>
+      <div><h2 style="font-size:16px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;flex-shrink:0;display:inline-block;vertical-align:middle;margin-right:5px"><rect width="18" height="18" rx="4" fill="#2563eb"/><rect x="2.5" y="10.5" width="3" height="5.5" rx="0.7" fill="rgba(255,255,255,0.45)"/><rect x="7.5" y="6.5" width="3" height="9.5" rx="0.7" fill="rgba(255,255,255,0.75)"/><rect x="12.5" y="2" width="3" height="14" rx="0.7" fill="white"/></svg>BazaarLens</h2><p id="sidebar-market-label">AI-powered weekly analysis</p></div>
       <div style="display:flex;gap:5px;align-items:center">
         <button class="theme-toggle home-btn" id="home-btn" onclick="showHub()" title="Back to home">🏠</button>
         <button class="theme-toggle account-btn" id="account-btn" onclick="showAccount('app')" title="Account settings">👤</button>
