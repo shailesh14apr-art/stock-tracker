@@ -17,6 +17,9 @@
     },
     "api/weekly-update.js": {
       "maxDuration": 60
+    },
+    "api/earnings.js": {
+      "maxDuration": 20
     }
   },
   "headers": [

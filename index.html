@@ -1375,6 +1375,51 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   }
 }
 
+
+/* ── EARNINGS CALENDAR PAGE ─────────────────────────────────────────────── */
+#earnings-page{position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto;overflow-x:hidden;font-family:'Segoe UI',system-ui,sans-serif;display:none;}
+.ec-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.ec-back{background:none;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;}
+.ec-back:hover{background:var(--surface2);color:var(--text);}
+.ec-title{font-size:18px;font-weight:700;color:var(--text);flex:1;}
+.ec-subtitle{font-size:12px;color:var(--text3);margin-top:1px;}
+.ec-body{max-width:900px;margin:0 auto;padding:32px 28px 60px;}
+.ec-tabs{display:flex;gap:4px;margin-bottom:28px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;}
+.ec-tab{padding:7px 20px;border-radius:7px;border:none;background:none;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s;}
+.ec-tab.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.3);}
+.ec-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--text3);margin:24px 0 10px;}
+.ec-section-label:first-child{margin-top:0;}
+.ec-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+.ec-date-row{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 16px;font-size:11px;font-weight:700;color:var(--text2);}
+.ec-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.ec-item:last-child{border-bottom:none;}
+.ec-item-sym{font-size:14px;font-weight:800;color:var(--text);width:100px;flex-shrink:0;}
+.ec-item-name{font-size:12px;color:var(--text3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ec-item-est{font-size:12px;color:var(--text2);text-align:right;flex-shrink:0;}
+.ec-item-est strong{color:var(--text);font-weight:700;}
+.ec-item-est span{font-size:10px;color:var(--text3);}
+.ec-brief-btn{flex-shrink:0;padding:6px 13px;font-size:11px;font-weight:700;background:rgba(59,130,246,.1);color:var(--accent);border:1px solid rgba(59,130,246,.25);border-radius:7px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.ec-brief-btn:hover{background:var(--accent);color:#fff;}
+.ec-no-date-grid{display:flex;flex-wrap:wrap;gap:8px;padding:12px;}
+.ec-no-date-chip{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;}
+.ec-no-date-chip:hover{border-color:var(--accent);color:var(--accent);}
+/* Past results table */
+.ec-table{width:100%;border-collapse:collapse;}
+.ec-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);}
+.ec-table td{padding:12px 14px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.ec-table tr:last-child td{border-bottom:none;}
+.ec-table tr:hover td{background:var(--surface2);}
+.ec-sym-cell{font-weight:800;font-size:13px;color:var(--text);}
+.ec-name-cell{color:var(--text3);font-size:11px;}
+.ec-beat{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.ec-miss{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.ec-inline{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+.ec-empty{text-align:center;padding:60px 20px;color:var(--text3);}
+.ec-empty-icon{font-size:40px;margin-bottom:12px;}
+.ec-empty-title{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px;}
+.ec-spinner{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--text3);font-size:13px;}
+.ec-spin{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+
 </style>
 </head>
 <body>
@@ -1789,11 +1834,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <p>Ask AI about your entire watchlist — compare stocks, spot risks, and get cross-portfolio insights in plain English.</p>
         <button class="hub-open-btn" style="font-size:12px;padding:8px 16px;margin-top:auto;" onclick="event.stopPropagation();showPortfolioChat()">Open Portfolio Chat →</button>
       </div>
-      <div class="hub-card hub-card-small">
-        <div class="hub-card-small-top"><div class="hub-small-icon" style="background:#fff7ed">📅</div><span class="hub-soon-badge">Coming Soon</span></div>
+      <div class="hub-card hub-card-small" onclick="showEarningsCalendar()" style="cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="hub-card-small-top">
+          <div class="hub-small-icon" style="background:#fff7ed">📅</div>
+          <span class="hub-live-badge" style="font-size:9px;padding:2px 8px;"><span class="hub-live-dot"></span>&nbsp;Live</span>
+        </div>
         <h3>Earnings Calendar</h3>
-        <p>Upcoming NSE results with consensus estimates, earnings surprise history and AI pre-earnings analysis briefs.</p>
-        <button class="hub-notify-btn" disabled>Notify Me When Live</button>
+        <p>Upcoming earnings dates with EPS estimates, surprise history for your Indian &amp; US watchlist stocks.</p>
+        <button class="hub-open-btn" style="font-size:12px;padding:8px 16px;margin-top:auto;" onclick="event.stopPropagation();showEarningsCalendar()">Open Calendar →</button>
       </div>
     </div>
     <p class="hub-footer-note">⚠️ For informational purposes only. Not investment advice. Consult a registered financial advisor before investing.</p>
@@ -1885,6 +1933,26 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="pc-foot">⚠️ For informational purposes only · Not registered investment advice · Powered by Claude Sonnet AI</div>
   </div>
 
+</div>
+
+
+<!-- ── EARNINGS CALENDAR PAGE ──────────────────────────────────────────── -->
+<div id="earnings-page">
+  <div class="ec-header">
+    <button class="ec-back" onclick="hideEarningsCalendar()">← Hub</button>
+    <div>
+      <div class="ec-title">📅 Earnings Calendar</div>
+      <div class="ec-subtitle">Upcoming dates &amp; past results for your watchlist</div>
+    </div>
+  </div>
+  <div class="ec-body">
+    <div class="ec-tabs">
+      <button class="ec-tab active" id="ec-tab-upcoming" onclick="ecSwitchTab('upcoming')">Upcoming</button>
+      <button class="ec-tab" id="ec-tab-past" onclick="ecSwitchTab('past')">Past Results</button>
+    </div>
+    <div id="ec-upcoming-panel"></div>
+    <div id="ec-past-panel" style="display:none;"></div>
+  </div>
 </div>
 
 <!-- ── APP SHELL ─────────────────────────────────────────────────────────── -->
@@ -4285,6 +4353,179 @@ function logEvent(name, params) {
 const _t = localStorage.getItem('theme') || 'dark';
 document.documentElement.setAttribute('data-theme', _t);
 document.getElementById('theme-toggle').textContent = _t === 'light' ? '🌙' : '☀️';
+
+// ── EARNINGS CALENDAR ────────────────────────────────────────────────────
+let _ecData = null;
+let _ecTab  = 'upcoming';
+
+function showEarningsCalendar() {
+  document.getElementById('hub').style.display = 'none';
+  document.getElementById('earnings-page').style.display = 'block';
+  if (!_ecData) _ecLoad();
+}
+
+function hideEarningsCalendar() {
+  document.getElementById('earnings-page').style.display = 'none';
+  showHub();
+}
+
+function ecSwitchTab(tab) {
+  _ecTab = tab;
+  document.getElementById('ec-tab-upcoming').classList.toggle('active', tab === 'upcoming');
+  document.getElementById('ec-tab-past').classList.toggle('active', tab === 'past');
+  document.getElementById('ec-upcoming-panel').style.display = tab === 'upcoming' ? '' : 'none';
+  document.getElementById('ec-past-panel').style.display     = tab === 'past'     ? '' : 'none';
+}
+
+async function _ecLoad() {
+  const up = document.getElementById('ec-upcoming-panel');
+  const ps = document.getElementById('ec-past-panel');
+  const spin = '<div class="ec-spinner"><div class="ec-spin"></div>Fetching earnings data…</div>';
+  up.innerHTML = spin; ps.innerHTML = spin;
+
+  // Collect both watchlists
+  const inSyms     = (() => { try { return JSON.parse(localStorage.getItem('watchlist') || '[]'); } catch { return []; } })();
+  const globalSyms = (() => { try { return JSON.parse(localStorage.getItem('watchlist_global') || '[]'); } catch { return []; } })();
+  const allSyms    = [...inSyms.map(s => s + '.NS'), ...globalSyms];
+
+  if (!allSyms.length) {
+    const empty = '<div class="ec-empty"><div class="ec-empty-icon">📋</div><div class="ec-empty-title">No stocks in your watchlist</div><p>Add stocks from Indian or Global Markets to see their earnings.</p></div>';
+    up.innerHTML = empty; ps.innerHTML = empty; return;
+  }
+
+  try {
+    const res = await fetch('/api/earnings?symbols=' + encodeURIComponent(allSyms.join(',')));
+    const json = await res.json();
+    _ecData = json.earnings || [];
+  } catch (e) {
+    up.innerHTML = '<div class="ec-empty"><div class="ec-empty-icon">⚠️</div><div class="ec-empty-title">Failed to load earnings data</div><p>Please try again later.</p></div>';
+    ps.innerHTML = up.innerHTML; return;
+  }
+
+  _ecRenderUpcoming();
+  _ecRenderPast();
+}
+
+function _ecRenderUpcoming() {
+  const panel = document.getElementById('ec-upcoming-panel');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+  const endOfNextWeek = new Date(endOfWeek); endOfNextWeek.setDate(endOfWeek.getDate() + 7);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  const groups = { thisWeek: [], nextWeek: [], thisMonth: [], later: [], noDate: [] };
+
+  for (const d of _ecData) {
+    if (!d.upcomingDate) { groups.noDate.push(d); continue; }
+    const dt = new Date(d.upcomingDate + 'T00:00:00');
+    if (dt <= endOfWeek)     groups.thisWeek.push(d);
+    else if (dt <= endOfNextWeek) groups.nextWeek.push(d);
+    else if (dt <= endOfMonth)    groups.thisMonth.push(d);
+    else                          groups.later.push(d);
+  }
+
+  let html = '';
+  const fmtDate = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { weekday:'short', month:'short', day:'numeric' });
+  const fmtEps  = (v, cur) => v == null ? '—' : (cur === 'INR' ? '₹' : '$') + Math.abs(v).toFixed(2);
+
+  function renderGroup(label, items) {
+    if (!items.length) return '';
+    // Sort by date
+    items.sort((a,b) => (a.upcomingDate||'').localeCompare(b.upcomingDate||''));
+    let s = `<div class="ec-section-label">${label}</div><div class="ec-card">`;
+    let lastDate = '';
+    for (const d of items) {
+      if (d.upcomingDate !== lastDate) {
+        if (lastDate) s += '';
+        s += `<div class="ec-date-row">📅 ${fmtDate(d.upcomingDate)}</div>`;
+        lastDate = d.upcomingDate;
+      }
+      const symBase = d.symbol.replace('.NS','');
+      const estStr = d.epsEstimate != null
+        ? `<strong>${fmtEps(d.epsEstimate, d.currency)}</strong> <span>(${fmtEps(d.epsLow, d.currency)} – ${fmtEps(d.epsHigh, d.currency)})</span>`
+        : '<span>No estimate</span>';
+      s += `<div class="ec-item">
+        <div class="ec-item-sym">${symBase}</div>
+        <div class="ec-item-name">${d.name}</div>
+        <div class="ec-item-est">EPS est ${estStr}</div>
+        <button class="ec-brief-btn" onclick="ecOpenAnalysis('${symBase}','${d.market}')">AI Analysis →</button>
+      </div>`;
+    }
+    s += '</div>';
+    return s;
+  }
+
+  html += renderGroup('THIS WEEK', groups.thisWeek);
+  html += renderGroup('NEXT WEEK', groups.nextWeek);
+  html += renderGroup('THIS MONTH', groups.thisMonth);
+  html += renderGroup('LATER', groups.later);
+
+  if (groups.noDate.length) {
+    html += `<div class="ec-section-label">DATE NOT YET ANNOUNCED</div><div class="ec-card"><div class="ec-no-date-grid">`;
+    for (const d of groups.noDate) {
+      const symBase = d.symbol.replace('.NS','');
+      html += `<div class="ec-no-date-chip" onclick="ecOpenAnalysis('${symBase}','${d.market}')" title="${d.name}">${symBase}</div>`;
+    }
+    html += '</div></div>';
+  }
+
+  if (!html) html = '<div class="ec-empty"><div class="ec-empty-icon">📅</div><div class="ec-empty-title">No upcoming earnings dates found</div><p>Dates may not be announced yet. Check Past Results for recent history.</p></div>';
+  panel.innerHTML = html;
+}
+
+function _ecRenderPast() {
+  const panel = document.getElementById('ec-past-panel');
+  const rows = [];
+  for (const d of _ecData) {
+    const symBase = d.symbol.replace('.NS','');
+    const cur = d.currency === 'INR' ? '₹' : '$';
+    for (const h of (d.history || [])) {
+      if (h.epsActual == null && h.epsEstimate == null) continue;
+      rows.push({ symBase, name: d.name, market: d.market, cur, ...h });
+    }
+  }
+
+  if (!rows.length) {
+    panel.innerHTML = '<div class="ec-empty"><div class="ec-empty-icon">📊</div><div class="ec-empty-title">No past results found</div><p>Earnings history may not be available for all stocks.</p></div>';
+    return;
+  }
+
+  let t = `<div class="ec-card"><table class="ec-table"><thead><tr>
+    <th>Stock</th><th>Quarter</th><th>EPS Estimate</th><th>EPS Actual</th><th>Surprise</th><th></th>
+  </tr></thead><tbody>`;
+
+  for (const r of rows) {
+    const est  = r.epsEstimate != null ? r.cur + Math.abs(r.epsEstimate).toFixed(2) : '—';
+    const act  = r.epsActual   != null ? r.cur + Math.abs(r.epsActual).toFixed(2)   : '—';
+    let badge = '';
+    if (r.surprisePct != null) {
+      if (r.surprisePct > 2)       badge = `<span class="ec-beat">BEAT +${r.surprisePct}%</span>`;
+      else if (r.surprisePct < -2) badge = `<span class="ec-miss">MISS ${r.surprisePct}%</span>`;
+      else                          badge = `<span class="ec-inline">IN LINE</span>`;
+    }
+    t += `<tr>
+      <td><div class="ec-sym-cell" style="cursor:pointer;color:var(--accent);" onclick="ecOpenAnalysis('${r.symBase}','${r.market}')">${r.symBase}</div>
+          <div class="ec-name-cell">${r.name}</div></td>
+      <td style="color:var(--text2)">${r.quarter}</td>
+      <td style="font-variant-numeric:tabular-nums">${est}</td>
+      <td style="font-variant-numeric:tabular-nums;font-weight:600">${act}</td>
+      <td>${badge}</td>
+      <td><button class="ec-brief-btn" onclick="ecOpenAnalysis('${r.symBase}','${r.market}')">Analyse →</button></td>
+    </tr>`;
+  }
+  t += '</tbody></table></div>';
+  panel.innerHTML = t;
+}
+
+function ecOpenAnalysis(sym, market) {
+  // Navigate to the analysis app for this stock
+  hideEarningsCalendar();
+  showApp(market).then(() => {
+    const match = getWatchlist().find(s => s === sym);
+    if (match) selectStock(sym);
+  });
+}
+
 </script>
 </body>
 </html>
