@@ -3,6 +3,10 @@
     {
       "path": "/api/weekly-update",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/nse-calendar-sync",
+      "schedule": "30 18 * * *"
     }
   ],
   "functions": {
@@ -20,6 +24,9 @@
     },
     "api/earnings.js": {
       "maxDuration": 20
+    },
+    "api/nse-calendar-sync.js": {
+      "maxDuration": 30
     }
   },
   "headers": [
