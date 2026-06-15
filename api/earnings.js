@@ -8,7 +8,20 @@ const YF_HEADERS = {
   'Origin': 'https://finance.yahoo.com',
 };
 
-async function fetchYF(path, timeout = 6000) {
+function baseEntry(symbol) {
+  return {
+    symbol,
+    name: symbol.replace('.NS', ''),
+    currency: symbol.endsWith('.NS') ? 'INR' : 'USD',
+    market: symbol.endsWith('.NS') ? 'in' : 'global',
+    upcomingDate: null,
+    epsEstimate: null, epsLow: null, epsHigh: null,
+    history: [],
+    _source: 'stub',
+  };
+}
+
+async function fetchYF(path, timeout = 7000) {
   try {
     return await Promise.any([
       fetch(`https://query1.finance.yahoo.com${path}`, { headers: YF_HEADERS, signal: AbortSignal.timeout(timeout) })
@@ -20,13 +33,16 @@ async function fetchYF(path, timeout = 6000) {
 }
 
 async function fetchEarnings(symbol) {
+  const entry = baseEntry(symbol);
   try {
     const r = await fetchYF(
       `/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=calendarEvents,earningsHistory,price`
     );
-    if (!r) return null;
-    const res = (await r.json())?.quoteSummary?.result?.[0];
-    if (!res) return null;
+    if (!r) return entry; // YF failed — return stub so symbol still shows
+
+    const data = await r.json();
+    const res  = data?.quoteSummary?.result?.[0];
+    if (!res) return entry;
 
     const ce      = res.calendarEvents?.earnings;
     const price   = res.price;
@@ -36,10 +52,9 @@ async function fetchEarnings(symbol) {
     const upcomingTs = ce?.earningsDate?.find(d => d.raw * 1000 >= now - 86400000)?.raw ?? null;
 
     return {
-      symbol,
-      name:         price?.longName || price?.shortName || symbol,
-      currency:     price?.currency || (symbol.endsWith('.NS') ? 'INR' : 'USD'),
-      market:       symbol.endsWith('.NS') ? 'in' : 'global',
+      ...entry,
+      name:         price?.longName || price?.shortName || entry.name,
+      currency:     price?.currency || entry.currency,
       upcomingDate: upcomingTs ? new Date(upcomingTs * 1000).toISOString().split('T')[0] : null,
       epsEstimate:  ce?.earningsAverage?.raw ?? null,
       epsLow:       ce?.earningsLow?.raw ?? null,
@@ -50,8 +65,9 @@ async function fetchEarnings(symbol) {
         epsActual:   h.epsActual?.raw ?? null,
         surprisePct: h.surprisePercent?.raw != null ? +(h.surprisePercent.raw * 100).toFixed(1) : null,
       })),
+      _source: 'yahoo',
     };
-  } catch { return null; }
+  } catch { return entry; }
 }
 
 export default async function handler(req) {
@@ -62,10 +78,6 @@ export default async function handler(req) {
   };
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
-  const ua = req.headers.get('user-agent') || '';
-  if (!ua.includes('Mozilla') && !ua.includes('AppleWebKit'))
-    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: cors });
-
   const p       = new URL(req.url).searchParams;
   const symbols = (p.get('symbols') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 40);
   if (!symbols.length)
@@ -73,7 +85,7 @@ export default async function handler(req) {
 
   const results = await Promise.all(symbols.map(fetchEarnings));
 
-  return new Response(JSON.stringify({ earnings: results.filter(Boolean) }), {
+  return new Response(JSON.stringify({ earnings: results }), {
     status: 200,
     headers: { ...cors, 'Content-Type': 'application/json' },
   });
